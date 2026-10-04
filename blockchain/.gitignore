@@ -1,0 +1,12 @@
+node_modules/
+artifacts/
+cache/
+coverage/
+types/
+dist/
+.env
+.env.*
+!.env.example
+# Deploys de la red local (cambian en cada reinicio del nodo)
+deployments/31337.json
+deployments/31338.json

@@ -1,0 +1,22 @@
+# Postgres para desarrollo local: `npm run db:up`
+# Coincide con DATABASE_URL de .env.example.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tokenarg
+      POSTGRES_PASSWORD: tokenarg
+      POSTGRES_DB: tokenarg
+    ports:
+      - "5432:5432"
+    volumes:
+      - tokenarg-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tokenarg -d tokenarg"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  tokenarg-db:

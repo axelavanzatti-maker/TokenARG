@@ -1,0 +1,26 @@
+{
+  "_nota": "Direcciones de producción que usa scripts/deploy.ts en Polygon (137) y Ethereum (1). VERIFICALAS contra las fuentes oficiales (Circle, Tether, Uniswap) antes de desplegar: el script exige CONFIRM_MAINNET=1.",
+  "137": {
+    "usdc": "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359",
+    "uniswapSwapRouter02": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+    "uniswapQuoterV2": "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+    "wrappedNative": "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+    "assets": [
+      { "symbol": "POL", "name": "Polygon", "address": "native", "decimals": 18, "poolFee": 500 },
+      { "symbol": "WETH", "name": "Wrapped Ether", "address": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619", "decimals": 18, "poolFee": 500 },
+      { "symbol": "WBTC", "name": "Wrapped BTC", "address": "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6", "decimals": 8, "poolFee": 500 },
+      { "symbol": "USDT", "name": "Tether USD", "address": "0xc2132D05D31c914a87C6611C10748AEb04B58e8F", "decimals": 6, "poolFee": 100 }
+    ]
+  },
+  "1": {
+    "usdc": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "uniswapSwapRouter02": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+    "uniswapQuoterV2": "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
+    "wrappedNative": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "assets": [
+      { "symbol": "ETH", "name": "Ether", "address": "native", "decimals": 18, "poolFee": 500 },
+      { "symbol": "WBTC", "name": "Wrapped BTC", "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599", "decimals": 8, "poolFee": 3000 },
+      { "symbol": "USDT", "name": "Tether USD", "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7", "decimals": 6, "poolFee": 100 }
+    ]
+  }
+}

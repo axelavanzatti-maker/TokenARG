@@ -1,0 +1,389 @@
+[
+  {
+    "slug": "torre-cordoba-centro",
+    "title": "Torre Residencial Córdoba Centro — Etapa Pozo",
+    "category": "INMUEBLES",
+    "location": "Nueva Córdoba, Córdoba",
+    "summary": "Edificio de 14 pisos con 96 unidades a 400 metros de la Plaza España. Se financia la etapa de estructura; el retorno sale de la venta de unidades terminadas.",
+    "description": [
+      "El fideicomiso de construcción tiene el lote escriturado y los planos aprobados por la Municipalidad de Córdoba. Lo recaudado en esta ronda cubre la estructura de hormigón y los cerramientos de los pisos 1 a 8.",
+      "Cada token representa una cuotaparte del fideicomiso. Al terminar la obra, las unidades se venden y el producido neto se reparte entre los tenedores en USDC, en proporción a sus tokens.",
+      "El fiduciario publica un informe de avance de obra mensual, firmado por el director técnico, en esta misma ficha."
+    ],
+    "highlights": [
+      "Lote escriturado a nombre del fideicomiso y planos aprobados",
+      "Constructora con 11 obras terminadas en Córdoba Capital",
+      "62 % de las unidades ya reservadas por compradores finales"
+    ],
+    "risks": [
+      "Demoras de obra por suba de costos o falta de insumos",
+      "El precio de venta final de las unidades puede ser menor al proyectado",
+      "No hay mercado secundario hasta que el fiduciario lo habilite"
+    ],
+    "issuer": "Fideicomiso de Construcción Torre Centro (ejemplo)",
+    "trustee": "TokenARG Fiduciaria S.A. (ejemplo)",
+    "status": "FONDEANDO",
+    "targetAmountUSD": 350000,
+    "softCapUSD": 210000,
+    "minTicketUSD": 500,
+    "tokenPriceUSD": 10,
+    "estimatedIrr": 11.5,
+    "capRate": null,
+    "termMonths": 24,
+    "assetValuationUSD": 520000,
+    "offering": {
+      "opensInDays": -20,
+      "closesInDays": 26
+    },
+    "demo": {
+      "fundedPct": 70,
+      "distributions": []
+    },
+    "token": {
+      "name": "TokenARG Torre Córdoba Centro",
+      "symbol": "TCBA"
+    },
+    "images": [
+      "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&q=80&w=1200"
+    ],
+    "documents": [
+      {
+        "type": "CONTRATO_FIDEICOMISO",
+        "title": "Contrato de fideicomiso",
+        "file": "torre-cordoba-centro/contrato-fideicomiso.pdf"
+      },
+      {
+        "type": "TASACION",
+        "title": "Tasación del lote y proyecto",
+        "file": "torre-cordoba-centro/tasacion.pdf"
+      }
+    ],
+    "network": "polygon"
+  },
+  {
+    "slug": "renta-palermo-hollywood",
+    "title": "Departamentos en renta — Palermo Hollywood",
+    "category": "INMUEBLES",
+    "location": "Palermo, Ciudad de Buenos Aires",
+    "summary": "Doce monoambientes terminados y alquilados en Palermo Hollywood. El alquiler neto se distribuye todos los trimestres.",
+    "description": [
+      "El fideicomiso compra un edificio terminado con doce monoambientes y los mantiene alquilados con contratos en dólares administrados por una inmobiliaria matriculada.",
+      "El alquiler cobrado, neto de expensas, impuestos y administración, se distribuye cada trimestre en USDC a los tenedores de tokens. Al cumplirse el plazo, los departamentos se venden y se distribuye el producido.",
+      "La ocupación de los últimos doce meses fue del 94 %."
+    ],
+    "highlights": [
+      "Inmueble terminado: sin riesgo de obra",
+      "Distribución trimestral de rentas en USDC",
+      "Contratos de alquiler vigentes por 11 de las 12 unidades"
+    ],
+    "risks": [
+      "Vacancia mayor a la estimada",
+      "Cambios en la normativa de alquileres",
+      "Variación del valor del inmueble al momento de la venta"
+    ],
+    "issuer": "Fideicomiso Renta Hollywood (ejemplo)",
+    "trustee": "TokenARG Fiduciaria S.A. (ejemplo)",
+    "status": "FONDEANDO",
+    "targetAmountUSD": 420000,
+    "softCapUSD": 420000,
+    "minTicketUSD": 250,
+    "tokenPriceUSD": 10,
+    "estimatedIrr": 9.1,
+    "capRate": 6.4,
+    "termMonths": 36,
+    "assetValuationUSD": 432000,
+    "offering": {
+      "opensInDays": -6,
+      "closesInDays": 40
+    },
+    "demo": {
+      "fundedPct": 35,
+      "distributions": []
+    },
+    "token": {
+      "name": "TokenARG Renta Palermo Hollywood",
+      "symbol": "RPAL"
+    },
+    "images": [],
+    "documents": [
+      {
+        "type": "CONTRATO_FIDEICOMISO",
+        "title": "Contrato de fideicomiso",
+        "file": "renta-palermo-hollywood/contrato-fideicomiso.pdf"
+      },
+      {
+        "type": "TASACION",
+        "title": "Tasación y rentabilidad histórica",
+        "file": "renta-palermo-hollywood/tasacion.pdf"
+      }
+    ],
+    "network": "ethereum"
+  },
+  {
+    "slug": "siembra-soja-la-pampa",
+    "title": "Campaña Gruesa 2026/27 — Pool Agrícola Pampeano",
+    "category": "AGRO",
+    "location": "General Pico, La Pampa",
+    "summary": "Siembra de 1.200 hectáreas de soja y maíz en campos arrendados del norte pampeano. Se cobra al vender la cosecha, entre abril y junio de 2027.",
+    "description": [
+      "El pool arrienda 1.200 hectáreas en el norte de La Pampa y financia semillas, fertilizantes, labores contratadas y seguro multirriesgo con lo recaudado en esta ronda.",
+      "La cosecha se vende entre abril y junio de 2027. El producido neto se distribuye en USDC en una única liquidación al cierre de la campaña.",
+      "El ingeniero agrónomo responsable publica un informe de estado de cultivos cada 30 días."
+    ],
+    "highlights": [
+      "Seguro multirriesgo contratado sobre el 100 % de la superficie",
+      "Rinde promedio de las últimas 5 campañas en la zona: 31 qq/ha de soja",
+      "Precio de venta parcialmente cubierto con contratos a cosecha"
+    ],
+    "risks": [
+      "Sequía o eventos climáticos por encima de la cobertura del seguro",
+      "Caída del precio internacional de los granos",
+      "Cambios en derechos de exportación"
+    ],
+    "issuer": "Pool Agrícola Pampeano Campaña 26/27 (ejemplo)",
+    "trustee": "TokenARG Fiduciaria S.A. (ejemplo)",
+    "status": "FONDEANDO",
+    "targetAmountUSD": 180000,
+    "softCapUSD": 120000,
+    "minTicketUSD": 1000,
+    "tokenPriceUSD": 50,
+    "estimatedIrr": 14,
+    "capRate": null,
+    "termMonths": 10,
+    "assetValuationUSD": 180000,
+    "offering": {
+      "opensInDays": -25,
+      "closesInDays": 9
+    },
+    "demo": {
+      "fundedPct": 90,
+      "distributions": []
+    },
+    "token": {
+      "name": "TokenARG Pool Agrícola Pampeano 26/27",
+      "symbol": "PAGRO"
+    },
+    "images": [
+      "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&q=80&w=1200"
+    ],
+    "documents": [
+      {
+        "type": "CONTRATO_FIDEICOMISO",
+        "title": "Contrato de fideicomiso",
+        "file": "siembra-soja-la-pampa/contrato-fideicomiso.pdf"
+      },
+      {
+        "type": "PLAN_DE_NEGOCIOS",
+        "title": "Plan de siembra y presupuesto",
+        "file": "siembra-soja-la-pampa/plan-de-siembra.pdf"
+      }
+    ],
+    "network": "polygon"
+  },
+  {
+    "slug": "galpones-parque-industrial-pilar",
+    "title": "Galpones logísticos en renta — Parque Industrial Pilar",
+    "category": "INMUEBLES",
+    "network": "ethereum",
+    "location": "Pilar, Provincia de Buenos Aires",
+    "summary": "Dos naves logísticas de 4.800 m² alquiladas a un operador de e-commerce con contrato en dólares a 5 años. El alquiler neto se distribuye cada trimestre.",
+    "description": [
+      "El fideicomiso compró dos naves terminadas en el Parque Industrial Pilar, con muelles de carga, playa de maniobras y seguridad las 24 horas.",
+      "El inquilino es un operador logístico de comercio electrónico con contrato en dólares hasta 2030 y ajuste anual. El alquiler neto se distribuye en USDC cada trimestre, a prorrata de los tokens.",
+      "La ronda se completó y el fiduciario habilitó el mercado secundario: los tokens se pueden comprar y vender entre inversores verificados."
+    ],
+    "highlights": [
+      "Contrato de alquiler en dólares hasta 2030 con un único inquilino",
+      "Ocupación del 100 % desde la compra",
+      "Mercado secundario habilitado entre inversores verificados"
+    ],
+    "risks": [
+      "Concentración en un solo inquilino",
+      "Vacancia si el inquilino no renueva al vencimiento",
+      "El precio en el mercado secundario puede ser menor al de emisión"
+    ],
+    "issuer": "Fideicomiso Galpones Pilar (ejemplo)",
+    "trustee": "TokenARG Fiduciaria S.A. (ejemplo)",
+    "status": "FINALIZADO",
+    "targetAmountUSD": 300000,
+    "softCapUSD": 300000,
+    "minTicketUSD": 500,
+    "tokenPriceUSD": 10,
+    "estimatedIrr": 10.4,
+    "capRate": 8.1,
+    "termMonths": 60,
+    "assetValuationUSD": 310000,
+    "offering": {
+      "opensInDays": -112,
+      "closesInDays": -80
+    },
+    "demo": {
+      "fundedPct": 100,
+      "distributions": [
+        {
+          "daysAgo": 62,
+          "amountUSD": 6075
+        },
+        {
+          "daysAgo": 2,
+          "amountUSD": 6150
+        }
+      ],
+      "market": {
+        "startsDaysAgo": 90,
+        "startPrice": 10.0,
+        "endPrice": 11.35,
+        "volatility": 0.018,
+        "trades": 36,
+        "openOrders": 6
+      }
+    },
+    "token": {
+      "name": "TokenARG Galpones Pilar",
+      "symbol": "GPIL"
+    },
+    "images": [],
+    "documents": [
+      {
+        "type": "CONTRATO_FIDEICOMISO",
+        "title": "Contrato de fideicomiso",
+        "file": "galpones-parque-industrial-pilar/contrato-fideicomiso.pdf"
+      },
+      {
+        "type": "TASACION",
+        "title": "Tasación y contrato de alquiler",
+        "file": "galpones-parque-industrial-pilar/tasacion.pdf"
+      }
+    ]
+  },
+  {
+    "slug": "pagare-logistica-rosario",
+    "title": "Pagaré Serie B — Logística & Transporte",
+    "category": "DEUDA_PYME",
+    "location": "Rosario, Santa Fe",
+    "summary": "Financiamiento de capital de trabajo para una PyME de transporte de cargas con 18 años de trayectoria. Paga intereses y capital a 6 meses.",
+    "description": [
+      "La empresa toma el financiamiento para renovar neumáticos y repuestos de su flota de 40 camiones. La deuda está documentada en pagarés a favor del fideicomiso y garantizada con la cesión de facturas a cobrar de sus tres principales clientes.",
+      "Los intereses se pagan en dos cuotas trimestrales y el capital al vencimiento, siempre en USDC y a prorrata de los tokens."
+    ],
+    "highlights": [
+      "Garantía: cesión de facturas por el 130 % del capital",
+      "Clientes cedidos: tres exportadores agroindustriales",
+      "Sin atrasos en las dos series anteriores"
+    ],
+    "risks": [
+      "Incumplimiento de la empresa deudora",
+      "Demora en el cobro de las facturas cedidas"
+    ],
+    "issuer": "Fideicomiso Financiero Logística Serie B (ejemplo)",
+    "trustee": "TokenARG Fiduciaria S.A. (ejemplo)",
+    "status": "FINALIZADO",
+    "targetAmountUSD": 50000,
+    "softCapUSD": 50000,
+    "minTicketUSD": 250,
+    "tokenPriceUSD": 1,
+    "estimatedIrr": 10.2,
+    "capRate": null,
+    "termMonths": 6,
+    "assetValuationUSD": 50000,
+    "offering": {
+      "opensInDays": -35,
+      "closesInDays": 5
+    },
+    "demo": {
+      "fundedPct": 100,
+      "distributions": [
+        {
+          "daysAgo": 8,
+          "amountUSD": 1275
+        }
+      ],
+      "market": {
+        "startsDaysAgo": 18,
+        "startPrice": 1.0,
+        "endPrice": 1.012,
+        "volatility": 0.006,
+        "trades": 18,
+        "openOrders": 4
+      }
+    },
+    "token": {
+      "name": "TokenARG Pagaré Logística Serie B",
+      "symbol": "PLOGB"
+    },
+    "images": [
+      "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&q=80&w=1200"
+    ],
+    "documents": [
+      {
+        "type": "CONTRATO_FIDEICOMISO",
+        "title": "Contrato de fideicomiso financiero",
+        "file": "pagare-logistica-rosario/contrato-fideicomiso.pdf"
+      },
+      {
+        "type": "ESTADOS_CONTABLES",
+        "title": "Estados contables del deudor",
+        "file": "pagare-logistica-rosario/estados-contables.pdf"
+      }
+    ],
+    "network": "polygon"
+  },
+  {
+    "slug": "bodega-valle-de-uco",
+    "title": "Ampliación de bodega boutique — Valle de Uco",
+    "category": "EMPRESAS",
+    "location": "Tupungato, Mendoza",
+    "summary": "Participación en una bodega boutique que duplica su capacidad de elaboración para exportar Malbec de altura. El retorno combina dividendos y la venta de la participación.",
+    "description": [
+      "La bodega elabora 180.000 botellas por año y exporta el 70 % a Estados Unidos y Brasil. La ampliación suma tanques de acero inoxidable y una nave de barricas para llegar a 400.000 botellas.",
+      "Los tokens representan participaciones en un fideicomiso que es accionista de la bodega. Los dividendos que reciba el fideicomiso se distribuyen en USDC; al año 5 se prevé la venta de la participación."
+    ],
+    "highlights": [
+      "Viñedos propios a 1.100 metros de altura",
+      "Contratos de distribución vigentes en dos mercados de exportación",
+      "Equipo fundador con 20 años en la industria"
+    ],
+    "risks": [
+      "Riesgo comercial y de tipo de cambio en exportaciones",
+      "Heladas o granizo que afecten la cosecha propia",
+      "La venta de la participación al año 5 no está garantizada"
+    ],
+    "issuer": "Fideicomiso Accionista Bodega Uco (ejemplo)",
+    "trustee": "TokenARG Fiduciaria S.A. (ejemplo)",
+    "status": "PROXIMAMENTE",
+    "targetAmountUSD": 250000,
+    "softCapUSD": 150000,
+    "minTicketUSD": 1000,
+    "tokenPriceUSD": 25,
+    "estimatedIrr": 18,
+    "capRate": null,
+    "termMonths": 60,
+    "assetValuationUSD": 1400000,
+    "offering": {
+      "opensInDays": 10,
+      "closesInDays": 55
+    },
+    "demo": {
+      "fundedPct": 0,
+      "distributions": []
+    },
+    "token": {
+      "name": "TokenARG Bodega Valle de Uco",
+      "symbol": "BUCO"
+    },
+    "images": [],
+    "documents": [
+      {
+        "type": "CONTRATO_FIDEICOMISO",
+        "title": "Contrato de fideicomiso",
+        "file": "bodega-valle-de-uco/contrato-fideicomiso.pdf"
+      },
+      {
+        "type": "PLAN_DE_NEGOCIOS",
+        "title": "Plan de negocios 2027–2031",
+        "file": "bodega-valle-de-uco/plan-de-negocios.pdf"
+      }
+    ],
+    "network": "ethereum"
+  }
+]

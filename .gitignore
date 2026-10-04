@@ -1,0 +1,26 @@
+# Dependencias
+node_modules/
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Variables de entorno: nunca subir secretos
+.env
+.env.*
+!.env.example
+
+# Cliente de Prisma (se regenera en `npm install` con prisma generate)
+src/generated/
+
+# Pruebas
+e2e/screenshots/
+coverage/
+
+# Varios
+.DS_Store
+*.pem
+npm-debug.log*
+.vercel
