@@ -75,9 +75,19 @@ jobs:
           cache: npm
           cache-dependency-path: blockchain/package-lock.json
       - name: Revisar la configuración
+        env:
+          # Solo verdadero o falso: el valor de una variable se vería en los logs.
+          KEY_AS_VARIABLE: ${{ vars.DEPLOYER_PRIVATE_KEY != '' || vars.DEPLOYER_PRIVATE_KEYS != '' || vars.DEPLOY_PRIVATE_KEY != '' }}
         run: |
           if [ -z "$DEPLOYER_PRIVATE_KEY" ]; then
-            echo "::error::Falta el secret DEPLOYER_PRIVATE_KEY (o DEPLOYER_PRIVATE_KEYS): cargalo en Settings → Secrets and variables → Actions → pestaña Secrets → New repository secret (no en Codespaces, Dependabot ni en un Environment)."
+            where="Settings → Secrets and variables → Actions → pestaña Secrets → New repository secret"
+            if [ "$KEY_AS_VARIABLE" = "true" ]; then
+              echo "::error title=La clave quedó cargada como variable::La clave privada está en la pestaña Variables, que no la protege. Borrala de ahí y creala en ${where}, con el nombre DEPLOYER_PRIVATE_KEY."
+            elif [ -z "$KYC_AGENT_ADDRESS" ]; then
+              echo "::error title=Falta el secret DEPLOYER_PRIVATE_KEY::El workflow no ve la clave ni la variable KYC_AGENT_ADDRESS. Seguramente quedaron dentro de un Environment (Settings → Environments), y de ahí no le llegan. Creá la clave en ${where} y la variable en la pestaña Variables → New repository variable."
+            else
+              echo "::error title=Falta el secret DEPLOYER_PRIVATE_KEY::El workflow ve la variable KYC_AGENT_ADDRESS pero no la clave (probé DEPLOYER_PRIVATE_KEY, DEPLOYER_PRIVATE_KEYS y DEPLOY_PRIVATE_KEY). Los secrets de un Environment, de Codespaces o de Dependabot no le llegan. Creala en ${where}."
+            fi
             exit 1
           fi
           key=$(echo "$DEPLOYER_PRIVATE_KEY" | tr -d '[:space:]')
