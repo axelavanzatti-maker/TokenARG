@@ -6,6 +6,7 @@ name: Deploy a testnet
 #
 # Secrets (Settings → Secrets and variables → Actions → Secrets):
 #   DEPLOYER_PRIVATE_KEY   obligatoria: billetera con POL de Amoy y/o ETH de Sepolia para el gas
+#                          (también se acepta con el nombre DEPLOYER_PRIVATE_KEYS o DEPLOY_PRIVATE_KEY)
 #   AMOY_RPC_URL           opcional (por defecto, el RPC público de Polygon)
 #   SEPOLIA_RPC_URL        opcional (por defecto, el RPC público de PublicNode)
 # Variables (pestaña Variables), todas opcionales:
@@ -54,8 +55,8 @@ jobs:
       matrix:
         red: ${{ fromJSON(inputs.redes == 'amoy-y-sepolia' && '["amoy","sepolia"]' || format('["{0}"]', inputs.redes)) }}
     env:
-      # También se acepta DEPLOY_PRIVATE_KEY (un nombre fácil de confundir).
-      DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || secrets.DEPLOY_PRIVATE_KEY }}
+      # También se aceptan DEPLOYER_PRIVATE_KEYS y DEPLOY_PRIVATE_KEY (nombres fáciles de confundir).
+      DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || secrets.DEPLOYER_PRIVATE_KEYS || secrets.DEPLOY_PRIVATE_KEY }}
       AMOY_RPC_URL: ${{ secrets.AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology' }}
       SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com' }}
       KYC_AGENT_ADDRESS: ${{ vars.KYC_AGENT_ADDRESS }}
@@ -76,7 +77,7 @@ jobs:
       - name: Revisar la configuración
         run: |
           if [ -z "$DEPLOYER_PRIVATE_KEY" ]; then
-            echo "::error::Falta el secret DEPLOYER_PRIVATE_KEY: cargalo en Settings → Secrets and variables → Actions → pestaña Secrets → New repository secret (no en Codespaces, Dependabot ni en un Environment)."
+            echo "::error::Falta el secret DEPLOYER_PRIVATE_KEY (o DEPLOYER_PRIVATE_KEYS): cargalo en Settings → Secrets and variables → Actions → pestaña Secrets → New repository secret (no en Codespaces, Dependabot ni en un Environment)."
             exit 1
           fi
           key=$(echo "$DEPLOYER_PRIVATE_KEY" | tr -d '[:space:]')
