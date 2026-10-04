@@ -1,0 +1,76 @@
+{
+  "chainId": 11155111,
+  "family": "ethereum",
+  "network": "sepolia",
+  "deployedAt": "2026-10-04T21:00:49.797Z",
+  "deployer": "0x5fc784b24424c4B691F9Aa76D4806077487Cc941",
+  "startBlock": 11844516,
+  "paymentToken": {
+    "address": "0x0Da8B82521b9D24CfbbAd1323cD846Bc30B60015",
+    "symbol": "USDC",
+    "decimals": 6,
+    "isMock": true
+  },
+  "paymentAssets": [
+    {
+      "symbol": "ETH",
+      "name": "Ether",
+      "address": "native",
+      "decimals": 18,
+      "isMock": true
+    },
+    {
+      "symbol": "WBTC",
+      "name": "Wrapped BTC (prueba)",
+      "address": "0xe1Fb953D11cC74cBCA2C30c8E1D32b8aeA2b6D1a",
+      "decimals": 8,
+      "isMock": true
+    },
+    {
+      "symbol": "USDT",
+      "name": "Tether USD (prueba)",
+      "address": "0xA224A21186Fb8E71eA11e16C060E92b232e2489d",
+      "decimals": 6,
+      "isMock": true
+    }
+  ],
+  "identityRegistry": "0xB7802a41cD75AC355c7006222f76149Dd328d6e6",
+  "kycAgent": "0x5fc784b24424c4B691F9Aa76D4806077487Cc941",
+  "treasury": "0x5fc784b24424c4B691F9Aa76D4806077487Cc941",
+  "admin": "0x5fc784b24424c4B691F9Aa76D4806077487Cc941",
+  "market": {
+    "address": "0x6990e83741d0C24CcdC62d144274dA9D9b324D05",
+    "feeRecipient": "0x5fc784b24424c4B691F9Aa76D4806077487Cc941",
+    "buyerFeeBps": 50,
+    "sellerFeeBps": 50,
+    "minOrderValueUSD": 10
+  },
+  "paymentRouter": "0x436BB503E6E075dCf5f9afe4BB5abFD5Bcb91DF2",
+  "swapAdapter": {
+    "address": "0x814301f5f211b137E2Ef6036b7eEC586fD2ed4bE",
+    "kind": "mock"
+  },
+  "projects": {
+    "renta-palermo-hollywood": {
+      "token": "0x3ac98363cF1b22bEa4c94A0AF1Df1Eaeb1d53a3E",
+      "offering": "0xcAbcfe2BdA04a0D95D87F4bDaDf4a432511b00Dd",
+      "documentHash": "0x3fc18004026da1399d6f025811b3a1a98050e37530adcf34608c98b033b66a33",
+      "startTime": 1790629249,
+      "endTime": 1794603649
+    },
+    "galpones-parque-industrial-pilar": {
+      "token": "0xd56940634a7b8462269D023Ed39d7948f3d16e4e",
+      "offering": "0x8c8caEaADCAEF94B4E709AD5110Fd119cc848053",
+      "documentHash": "0x684ad914a0b7edf6e88c7b803223c1a9f1dd272bd7c488140e4205800b463dfa",
+      "startTime": 1791061249,
+      "endTime": 1793739649
+    },
+    "bodega-valle-de-uco": {
+      "token": "0x24C9565ec95656b7076d61e4f4e6D85b6A855bF4",
+      "offering": "0x0411c33d0Dffd18853c3a338a79115f8fc0804b4",
+      "documentHash": "0x144a288e6f49631fa3a9b3e83757b28e2bde7993996e694b8756696f90d625ac",
+      "startTime": 1792011649,
+      "endTime": 1795899649
+    }
+  }
+}
