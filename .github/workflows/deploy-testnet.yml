@@ -52,10 +52,10 @@ jobs:
       ADMIN_ADDRESS: ${{ vars.ADMIN_ADDRESS }}
       DOCS_BASE_URL: ${{ inputs.docs_base_url || vars.DOCS_BASE_URL || 'http://localhost:3000/docs' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: ${{ github.ref }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm

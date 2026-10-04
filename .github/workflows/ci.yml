@@ -21,8 +21,8 @@ jobs:
     name: Contratos (Hardhat)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -41,8 +41,8 @@ jobs:
       NEXT_PUBLIC_NETWORK_MODE: local
       DATABASE_URL: postgresql://tokenarg:tokenarg@localhost:5432/tokenarg?schema=public
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -77,8 +77,8 @@ jobs:
       # Cuenta #1 de los nodos locales de Hardhat: clave pública de prueba, solo sirve en local.
       KYC_AGENT_PRIVATE_KEY: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
