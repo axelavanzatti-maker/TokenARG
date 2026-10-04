@@ -6,7 +6,7 @@ name: Deploy a testnet
 #
 # Secrets (Settings → Secrets and variables → Actions → Secrets):
 #   DEPLOYER_PRIVATE_KEY   obligatoria: billetera con POL de Amoy y/o ETH de Sepolia para el gas
-#                          (también se acepta con el nombre DEPLOYER_PRIVATE_KEYS o DEPLOY_PRIVATE_KEY)
+#                          (en este repo quedó cargada como DEPLOYES_PRIVATE_KEYS: sirven los dos nombres)
 #   AMOY_RPC_URL           opcional (por defecto, el RPC público de Polygon)
 #   SEPOLIA_RPC_URL        opcional (por defecto, el RPC público de PublicNode)
 # Variables (pestaña Variables), todas opcionales:
@@ -55,8 +55,9 @@ jobs:
       matrix:
         red: ${{ fromJSON(inputs.redes == 'amoy-y-sepolia' && '["amoy","sepolia"]' || format('["{0}"]', inputs.redes)) }}
     env:
-      # También se aceptan DEPLOYER_PRIVATE_KEYS y DEPLOY_PRIVATE_KEY (nombres fáciles de confundir).
-      DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || secrets.DEPLOYER_PRIVATE_KEYS || secrets.DEPLOY_PRIVATE_KEY }}
+      # El secret de este repo quedó cargado como DEPLOYES_PRIVATE_KEYS (un secret no se puede
+      # renombrar): sirven los dos nombres.
+      DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || secrets.DEPLOYES_PRIVATE_KEYS }}
       AMOY_RPC_URL: ${{ secrets.AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology' }}
       SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com' }}
       KYC_AGENT_ADDRESS: ${{ vars.KYC_AGENT_ADDRESS }}
@@ -77,7 +78,7 @@ jobs:
       - name: Revisar la configuración
         env:
           # Solo verdadero o falso: el valor de una variable se vería en los logs.
-          KEY_AS_VARIABLE: ${{ vars.DEPLOYER_PRIVATE_KEY != '' || vars.DEPLOYER_PRIVATE_KEYS != '' || vars.DEPLOY_PRIVATE_KEY != '' }}
+          KEY_AS_VARIABLE: ${{ vars.DEPLOYER_PRIVATE_KEY != '' || vars.DEPLOYES_PRIVATE_KEYS != '' }}
         run: |
           if [ -z "$DEPLOYER_PRIVATE_KEY" ]; then
             where="Settings → Secrets and variables → Actions → pestaña Secrets → New repository secret"
@@ -86,7 +87,7 @@ jobs:
             elif [ -z "$KYC_AGENT_ADDRESS" ]; then
               echo "::error title=Falta el secret DEPLOYER_PRIVATE_KEY::El workflow no ve la clave ni la variable KYC_AGENT_ADDRESS. Seguramente quedaron dentro de un Environment (Settings → Environments), y de ahí no le llegan. Creá la clave en ${where} y la variable en la pestaña Variables → New repository variable."
             else
-              echo "::error title=Falta el secret DEPLOYER_PRIVATE_KEY::El workflow ve la variable KYC_AGENT_ADDRESS pero no la clave (probé DEPLOYER_PRIVATE_KEY, DEPLOYER_PRIVATE_KEYS y DEPLOY_PRIVATE_KEY). Los secrets de un Environment, de Codespaces o de Dependabot no le llegan. Creala en ${where}."
+              echo "::error title=Falta el secret DEPLOYER_PRIVATE_KEY::El workflow ve la variable KYC_AGENT_ADDRESS pero no la clave. En la pestaña Secrets, bajo Repository secrets, tiene que haber uno llamado exactamente DEPLOYER_PRIVATE_KEY. Un secret no se puede renombrar: si el nombre está mal, creá otro en ${where} y borrá el viejo. Los secrets de un Environment, de Codespaces o de Dependabot no le llegan."
             fi
             exit 1
           fi
@@ -94,7 +95,7 @@ jobs:
           # MetaMask muestra la clave sin "0x": se acepta de las dos formas.
           if echo "$key" | grep -Eq '^[0-9a-fA-F]{64}$'; then key="0x$key"; fi
           if ! echo "$key" | grep -Eq '^0x[0-9a-fA-F]{64}$'; then
-            echo "::error::DEPLOYER_PRIVATE_KEY no es una clave privada válida: tienen que ser 64 caracteres hexadecimales (con o sin 0x adelante). En MetaMask: Detalles de la cuenta → Mostrar clave privada."
+            echo "::error title=La clave no es válida::Lo que está cargado en el secret no es una clave privada: tienen que ser 64 caracteres hexadecimales (con o sin 0x adelante). En MetaMask: Detalles de la cuenta → Mostrar clave privada."
             exit 1
           fi
           echo "::add-mask::$key"
