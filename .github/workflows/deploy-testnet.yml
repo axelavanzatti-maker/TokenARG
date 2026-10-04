@@ -7,12 +7,15 @@ name: Deploy a testnet
 # Secrets (Settings → Secrets and variables → Actions → Secrets):
 #   DEPLOYER_PRIVATE_KEY   obligatoria: billetera con POL de Amoy y/o ETH de Sepolia para el gas
 #                          (en este repo quedó cargada como DEPLOYES_PRIVATE_KEYS: sirven los dos nombres)
-#   AMOY_RPC_URL           opcional (por defecto, el RPC público de Polygon)
-#   SEPOLIA_RPC_URL        opcional (por defecto, el RPC público de PublicNode)
+#   AMOY_RPC_URL           opcional: un RPC propio (Alchemy, Infura...). Si no está o no responde,
+#   SEPOLIA_RPC_URL        se usa el primer RPC público que conteste con la red correcta.
 # Variables (pestaña Variables), todas opcionales:
 #   KYC_AGENT_ADDRESS      billetera del backend que da de alta inversores (por defecto, el deployer).
 #                          Si es otra, el deploy le pasa un poco de gas en cada red.
 #   TREASURY_ADDRESS, FEE_RECIPIENT_ADDRESS, ADMIN_ADDRESS, DOCS_BASE_URL
+#
+# Al final de cada corrida se revisa el deploy contra la cadena (scripts/verify-deployment.ts) y el
+# resultado queda como avisos en la corrida. La acción "verificar" hace solo esa revisión.
 
 on:
   workflow_dispatch:
@@ -25,7 +28,7 @@ on:
       accion:
         description: "Qué hacer"
         type: choice
-        options: [desplegar, solo-datos-de-demo]
+        options: [desplegar, solo-datos-de-demo, verificar]
         default: desplegar
       demo:
         description: "Cargar datos de demo (ronda fondeada y órdenes en el mercado)"
@@ -45,7 +48,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: ${{ inputs.accion == 'desplegar' && 'Deploy' || 'Datos de demo' }} en ${{ matrix.red }}
+    name: ${{ inputs.accion == 'desplegar' && 'Deploy' || inputs.accion == 'verificar' && 'Revisión' || 'Datos de demo' }} en ${{ matrix.red }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
@@ -58,8 +61,9 @@ jobs:
       # El secret de este repo quedó cargado como DEPLOYES_PRIVATE_KEYS (un secret no se puede
       # renombrar): sirven los dos nombres.
       DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY || secrets.DEPLOYES_PRIVATE_KEYS }}
-      AMOY_RPC_URL: ${{ secrets.AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology' }}
-      SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com' }}
+      # Vacíos si no hay secret: el paso "Elegir el RPC" pone uno público que responda.
+      AMOY_RPC_URL: ${{ secrets.AMOY_RPC_URL }}
+      SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL }}
       KYC_AGENT_ADDRESS: ${{ vars.KYC_AGENT_ADDRESS }}
       TREASURY_ADDRESS: ${{ vars.TREASURY_ADDRESS }}
       FEE_RECIPIENT_ADDRESS: ${{ vars.FEE_RECIPIENT_ADDRESS }}
@@ -76,6 +80,7 @@ jobs:
           cache: npm
           cache-dependency-path: blockchain/package-lock.json
       - name: Revisar la configuración
+        id: config
         env:
           # Solo verdadero o falso: el valor de una variable se vería en los logs.
           KEY_AS_VARIABLE: ${{ vars.DEPLOYER_PRIVATE_KEY != '' || vars.DEPLOYES_PRIVATE_KEYS != '' }}
@@ -100,15 +105,44 @@ jobs:
           fi
           echo "::add-mask::$key"
           echo "DEPLOYER_PRIVATE_KEY=$key" >> "$GITHUB_ENV"
+      - name: Elegir el RPC
+        id: rpc
+        run: |
+          case "${{ matrix.red }}" in
+            amoy)
+              var=AMOY_RPC_URL; want=0x13882
+              public="https://polygon-amoy-bor-rpc.publicnode.com https://rpc-amoy.polygon.technology https://polygon-amoy.drpc.org" ;;
+            sepolia)
+              var=SEPOLIA_RPC_URL; want=0xaa36a7
+              public="https://ethereum-sepolia-rpc.publicnode.com https://sepolia.drpc.org https://rpc.sepolia.org" ;;
+          esac
+          own="${!var:-}"
+          tried=""
+          for url in $own $public; do
+            got=$(curl -sS -m 20 -X POST -H 'content-type: application/json' \
+              --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}' "$url" 2>/dev/null | jq -r '.result // empty' 2>/dev/null || true)
+            if [ "$got" = "$want" ]; then
+              echo "${var}=${url}" >> "$GITHUB_ENV"
+              if [ "$url" = "$own" ]; then echo "RPC: el del secret ${var}"; else echo "::notice title=RPC de ${{ matrix.red }}::${url}"; fi
+              exit 0
+            fi
+            if [ "$url" = "$own" ]; then
+              echo "::warning title=RPC de ${{ matrix.red }}::El RPC del secret ${var} no respondió con la red correcta. Pruebo con los públicos."
+            else
+              tried="${tried} ${url}"
+            fi
+          done
+          echo "::error title=Sin RPC para ${{ matrix.red }}::Ningún RPC respondió con la red correcta (probé${tried}). Suele ser una caída momentánea: volvé a correr el workflow en unos minutos o cargá un RPC propio en el secret ${var}."
+          exit 1
       - run: npm ci
         working-directory: blockchain
       - name: Saldo para el gas
         if: inputs.accion == 'desplegar'
-        run: npx hardhat run scripts/preflight.ts --network ${{ matrix.red }}
+        run: bash scripts/ci-run.sh "Saldo para el gas en ${{ matrix.red }}" npx hardhat run scripts/preflight.ts --network ${{ matrix.red }}
         working-directory: blockchain
       - name: Desplegar
         if: inputs.accion == 'desplegar'
-        run: npx hardhat run scripts/deploy.ts --network ${{ matrix.red }}
+        run: bash scripts/ci-run.sh "Deploy en ${{ matrix.red }}" npx hardhat run scripts/deploy.ts --network ${{ matrix.red }}
         working-directory: blockchain
       - name: Guardar las direcciones en el repo
         if: inputs.accion == 'desplegar'
@@ -124,8 +158,15 @@ jobs:
           done
           exit 1
       - name: Datos de demo (ronda fondeada y mercado abierto)
-        if: inputs.demo || inputs.accion == 'solo-datos-de-demo'
-        run: npx hardhat run scripts/seed-testnet.ts --network ${{ matrix.red }}
+        if: (inputs.accion == 'desplegar' && inputs.demo) || inputs.accion == 'solo-datos-de-demo'
+        run: bash scripts/ci-run.sh "Datos de demo en ${{ matrix.red }}" npx hardhat run scripts/seed-testnet.ts --network ${{ matrix.red }}
+        working-directory: blockchain
+      - name: Revisar el deploy contra la cadena
+        if: ${{ !cancelled() && steps.rpc.outcome == 'success' }}
+        run: |
+          case "${{ matrix.red }}" in amoy) id=80002;; sepolia) id=11155111;; esac
+          if [ ! -f "deployments/${id}.json" ]; then echo "Todavía no hay contratos desplegados en ${{ matrix.red }}."; exit 0; fi
+          bash scripts/ci-run.sh "Revisión en ${{ matrix.red }}" npx hardhat run scripts/verify-deployment.ts --network ${{ matrix.red }}
         working-directory: blockchain
       - name: Resumen
         if: always()
