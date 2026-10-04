@@ -160,14 +160,17 @@ El deploy corre en GitHub Actions, así la clave nunca pasa por ninguna computad
 3. **GitHub.** Entrá a *Settings → Secrets and variables → Actions*:
    - pestaña *Secrets*: `DEPLOYER_PRIVATE_KEY`, la clave privada de la cuenta de deploy (en MetaMask: *Detalles de la cuenta → Mostrar clave privada*; con o sin `0x` adelante);
    - pestaña *Variables*: `KYC_AGENT_ADDRESS`, la dirección pública de la cuenta del agente.
-   - Opcional, en *Secrets*: `AMOY_RPC_URL` y `SEPOLIA_RPC_URL` (Alchemy, Infura). Sin ellos se usan los RPC públicos.
+   - Opcional, en *Secrets*: `AMOY_RPC_URL` y `SEPOLIA_RPC_URL` (Alchemy, Infura). Sin ellos, o si no responden, el workflow usa el primer RPC público que conteste con la red correcta.
+
+   El nombre del secret tiene que ser exacto, y un secret no se puede renombrar: si quedó mal, creá otro y borrá el viejo. En este repo la clave quedó como `DEPLOYES_PRIVATE_KEYS` y el workflow acepta ese nombre también.
 4. **Deploy.** En *Actions → Deploy a testnet → Run workflow*, elegí la red (`sepolia`, `amoy` o las dos) y dejá tildado "Cargar datos de demo". El workflow:
    - despliega;
    - commitea `blockchain/deployments/<chainId>.json`;
    - completa la ronda de los proyectos que en la demo ya estaban fondeados y publica órdenes de compra y venta, así el mercado P2P se puede usar desde el primer día;
-   - deja las direcciones, con enlaces al explorador, en el resumen de la corrida.
+   - deja las direcciones, con enlaces al explorador, en el resumen de la corrida;
+   - revisa el deploy contra la cadena: contratos, agente KYC con rol y gas, rondas, transferencias y órdenes del mercado.
 
-   Si los datos de demo fallan por falta de gas, cargá más y corré de nuevo con la acción `solo-datos-de-demo`.
+   Si algo falla, el motivo queda como aviso en la corrida, sin entrar al log. Si los datos de demo fallan por falta de gas, cargá más y corré de nuevo con la acción `solo-datos-de-demo`. La acción `verificar` solo hace la revisión.
 
 Sin GitHub Actions también funciona:
 
