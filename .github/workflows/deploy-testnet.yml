@@ -1,0 +1,102 @@
+name: Deploy a testnet
+
+# Despliega los contratos de TokenARG en Polygon Amoy y/o Ethereum Sepolia y guarda las
+# direcciones en blockchain/deployments/<chainId>.json (las importa `npm run chain:sync`).
+#
+# Secrets (Settings → Secrets and variables → Actions → Secrets):
+#   DEPLOYER_PRIVATE_KEY   obligatoria: billetera con POL de Amoy y/o ETH de Sepolia para el gas
+#   AMOY_RPC_URL           opcional (por defecto, el RPC público de Polygon)
+#   SEPOLIA_RPC_URL        opcional (por defecto, el RPC público de PublicNode)
+# Variables (pestaña Variables), todas opcionales:
+#   KYC_AGENT_ADDRESS      billetera del backend que da de alta inversores (por defecto, el deployer)
+#   TREASURY_ADDRESS, FEE_RECIPIENT_ADDRESS, ADMIN_ADDRESS, DOCS_BASE_URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      redes:
+        description: "Redes"
+        type: choice
+        options: [amoy-y-sepolia, amoy, sepolia]
+        default: amoy-y-sepolia
+      docs_base_url:
+        description: "URL pública de los PDF (ej. https://tokenarg.net.ar/docs). Vacío: la variable DOCS_BASE_URL o localhost."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-testnet
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy en ${{ matrix.red }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      # De a una: cada red hace su propio commit con las direcciones.
+      max-parallel: 1
+      matrix:
+        red: ${{ fromJSON(inputs.redes == 'amoy-y-sepolia' && '["amoy","sepolia"]' || format('["{0}"]', inputs.redes)) }}
+    env:
+      DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+      AMOY_RPC_URL: ${{ secrets.AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology' }}
+      SEPOLIA_RPC_URL: ${{ secrets.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com' }}
+      KYC_AGENT_ADDRESS: ${{ vars.KYC_AGENT_ADDRESS }}
+      TREASURY_ADDRESS: ${{ vars.TREASURY_ADDRESS }}
+      FEE_RECIPIENT_ADDRESS: ${{ vars.FEE_RECIPIENT_ADDRESS }}
+      ADMIN_ADDRESS: ${{ vars.ADMIN_ADDRESS }}
+      DOCS_BASE_URL: ${{ inputs.docs_base_url || vars.DOCS_BASE_URL || 'http://localhost:3000/docs' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: blockchain/package-lock.json
+      - name: Revisar la configuración
+        run: |
+          if [ -z "$DEPLOYER_PRIVATE_KEY" ]; then
+            echo "::error::Falta el secret DEPLOYER_PRIVATE_KEY (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+          if ! echo "$DEPLOYER_PRIVATE_KEY" | grep -Eq '^0x[0-9a-fA-F]{64}$'; then
+            echo "::error::DEPLOYER_PRIVATE_KEY tiene que ser 0x seguido de 64 caracteres hexadecimales."
+            exit 1
+          fi
+      - run: npm ci
+        working-directory: blockchain
+      - name: Saldo para el gas
+        run: npx hardhat run scripts/preflight.ts --network ${{ matrix.red }}
+        working-directory: blockchain
+      - name: Desplegar
+        run: npx hardhat run scripts/deploy.ts --network ${{ matrix.red }}
+        working-directory: blockchain
+      - name: Resumen
+        run: |
+          file=$(ls -t blockchain/deployments/*.json | head -1)
+          {
+            echo "### Contratos desplegados en ${{ matrix.red }}"
+            echo
+            echo '```json'
+            cat "$file"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Guardar las direcciones en el repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add blockchain/deployments/
+          if git diff --cached --quiet; then echo "Sin cambios"; exit 0; fi
+          git commit -m "Deploy en ${{ matrix.red }}: direcciones de los contratos"
+          for i in 1 2 3; do
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
+            sleep 5
+          done
+          exit 1

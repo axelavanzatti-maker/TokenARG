@@ -1,0 +1,258 @@
+// Modelo relacional de TokenARG.
+//
+// La blockchain es la fuente de verdad de tenencias, montos recaudados, distribuciones y
+// operaciones del mercado secundario; estas tablas son el catálogo comercial (fichas,
+// documentos), el legajo KYC y un índice de los eventos on-chain para listar, filtrar y graficar
+// rápido sin consultar el RPC en cada visita. El índice se reconstruye con `npm run chain:sync`.
+// Los proyectos viven en Polygon o en Ethereum: todo lo on-chain se guarda con su chainId.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Familia de red de un proyecto. El chainId concreto depende del modo (local, testnet, mainnet).
+enum Network {
+  polygon
+  ethereum
+}
+
+enum Category {
+  INMUEBLES
+  AGRO
+  DEUDA_PYME
+  EMPRESAS
+}
+
+enum ProjectStatus {
+  PROXIMAMENTE
+  FONDEANDO
+  FINALIZADO
+  LIQUIDADO
+  CANCELADO
+}
+
+enum KycStatus {
+  NO_INICIADO
+  PENDIENTE
+  APROBADO
+  RECHAZADO
+}
+
+enum DocumentType {
+  CONTRATO_FIDEICOMISO
+  TASACION
+  PLAN_DE_NEGOCIOS
+  ESTADOS_CONTABLES
+  INFORME_AVANCE
+  OTRO
+}
+
+enum InvestmentStatus {
+  CONFIRMADA
+  REEMBOLSADA
+}
+
+model User {
+  id                 String       @id @default(cuid())
+  /// Dirección con checksum EIP-55. Se vincula por firma (SIWE), nunca por lo que diga el cliente.
+  walletAddress      String       @unique
+  email              String?      @unique
+  fullName           String?
+  /// CUIT / CUIL. Dato personal: cifrar en reposo en producción.
+  taxId              String?
+  /// Declaración jurada de Persona Expuesta Políticamente (UIF).
+  isPep              Boolean      @default(false)
+  termsAcceptedAt    DateTime?
+  kycStatus          KycStatus    @default(NO_INICIADO)
+  kycProvider        String?
+  /// Identificador de la sesión en el proveedor KYC (idempotencia de webhooks).
+  kycReference       String?      @unique
+  kycRejectionReason String?
+  kycVerifiedAt      DateTime?
+  kycExpiresAt       DateTime?
+  /// Alta de la billetera en el IdentityRegistry de cada red.
+  verifications      WalletVerification[]
+  investments        Investment[]
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+}
+
+model Project {
+  id                 String        @id @default(cuid())
+  slug               String        @unique
+  title              String
+  summary            String
+  /// Párrafos separados por una línea en blanco.
+  description        String
+  category           Category
+  network            Network       @default(polygon)
+  status             ProjectStatus @default(PROXIMAMENTE)
+  location           String
+  issuer             String
+  trustee            String
+  highlights         String[]
+  risks              String[]
+  images             String[]
+
+  // Métricas financieras (USD; los montos en USDC conservan sus 6 decimales)
+  targetAmountUSD    Decimal       @db.Decimal(18, 6)
+  softCapUSD         Decimal       @db.Decimal(18, 6)
+  collectedAmountUSD Decimal       @default(0) @db.Decimal(18, 6)
+  investorCount      Int           @default(0)
+  minTicketUSD       Decimal       @db.Decimal(18, 6)
+  tokenPriceUSD      Decimal       @db.Decimal(18, 6)
+  /// TIR estimada anual, en porcentaje (11.50 = 11,5 %).
+  estimatedIrr       Decimal       @db.Decimal(5, 2)
+  /// Cap rate en porcentaje; solo aplica a inmuebles que generan renta.
+  capRate            Decimal?      @db.Decimal(5, 2)
+  termMonths         Int
+  assetValuationUSD  Decimal       @db.Decimal(18, 2)
+  opensAt            DateTime
+  closesAt           DateTime
+
+  // Metadatos on-chain (se completan con `npm run chain:sync` después del deploy)
+  chainId            Int?
+  tokenSymbol        String
+  tokenAddress       String?
+  offeringAddress    String?
+  /// Hash del bloque inicial del deploy. Si cambia (por ejemplo, se reinició el nodo local y
+  /// las direcciones se repiten), el índice de eventos del proyecto se descarta y se rehace.
+  deploymentRef      String?
+  lastSyncedBlock    BigInt?
+
+  documents          Document[]
+  investments        Investment[]
+  distributions      Distribution[]
+  trades             Trade[]
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  // Una misma dirección puede repetirse en redes distintas: la unicidad es por red.
+  @@unique([chainId, tokenAddress])
+  @@unique([chainId, offeringAddress])
+  @@index([status, category])
+}
+
+model Document {
+  id        String       @id @default(cuid())
+  projectId String
+  type      DocumentType
+  title     String
+  /// Ruta pública (/docs/...) o URL absoluta (IPFS, S3).
+  url       String
+  /// SHA-256 del archivo en hex, sin prefijo. El del contrato de fideicomiso está anclado en el token.
+  sha256    String
+  sizeBytes Int?
+  sortOrder Int          @default(0)
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@unique([projectId, url])
+}
+
+/// Una compra confirmada on-chain (evento TokensPurchased). Nunca se crea con datos del cliente.
+model Investment {
+  id             String           @id @default(cuid())
+  projectId      String
+  /// Se completa si la billetera tiene usuario en la plataforma.
+  userId         String?
+  investorWallet String
+  amountUSD      Decimal          @db.Decimal(18, 6)
+  tokenAmount    Decimal          @db.Decimal(36, 18)
+  status         InvestmentStatus @default(CONFIRMADA)
+  chainId        Int
+  txHash         String
+  logIndex       Int
+  blockNumber    BigInt
+  executedAt     DateTime
+  project        Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user           User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt      DateTime         @default(now())
+
+  @@unique([chainId, txHash, logIndex])
+  @@index([investorWallet])
+  @@index([projectId])
+}
+
+/// Distribución depositada por el fiduciario (evento DistributionDeposited).
+model Distribution {
+  id          String   @id @default(cuid())
+  projectId   String
+  amountUSD   Decimal  @db.Decimal(18, 6)
+  chainId     Int
+  txHash      String
+  logIndex    Int
+  blockNumber BigInt
+  executedAt  DateTime
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([chainId, txHash, logIndex])
+  @@index([projectId])
+}
+
+/// Alta de una billetera verificada en el IdentityRegistry de una red (la hace el agente KYC).
+model WalletVerification {
+  id         String   @id @default(cuid())
+  userId     String
+  chainId    Int
+  txHash     String
+  validUntil DateTime
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, chainId])
+}
+
+/// Contratos de la plataforma en una red (lo carga `npm run chain:sync` desde deployments/).
+model ChainDeployment {
+  chainId           Int      @id
+  network           Network
+  identityRegistry  String
+  paymentToken      String
+  paymentRouter     String
+  market            String
+  buyerFeeBps       Int
+  sellerFeeBps      Int
+  minOrderValueUSD  Decimal  @db.Decimal(18, 6)
+  /// Monedas aceptadas además de USDC: [{ symbol, name, address | "native", decimals, isMock }]
+  paymentAssets     Json
+  startBlock        BigInt
+  /// Hash del bloque inicial del deploy (detecta un nodo local reiniciado).
+  deploymentRef     String
+  /// Último bloque indexado de los eventos del mercado secundario.
+  marketSyncedBlock BigInt?
+  updatedAt         DateTime @updatedAt
+}
+
+/// Operación del mercado secundario (evento OrderFilled de P2PMarket).
+model Trade {
+  id           String   @id @default(cuid())
+  projectId    String
+  chainId      Int
+  orderId      BigInt
+  buyer        String
+  seller       String
+  /// USD por token entero.
+  priceUSD     Decimal  @db.Decimal(18, 6)
+  tokenAmount  Decimal  @db.Decimal(36, 18)
+  valueUSD     Decimal  @db.Decimal(18, 6)
+  buyerFeeUSD  Decimal  @db.Decimal(18, 6)
+  sellerFeeUSD Decimal  @db.Decimal(18, 6)
+  txHash       String
+  logIndex     Int
+  blockNumber  BigInt
+  executedAt   DateTime
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@unique([chainId, txHash, logIndex])
+  @@index([projectId, executedAt])
+  @@index([buyer])
+  @@index([seller])
+}

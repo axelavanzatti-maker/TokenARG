@@ -1,0 +1,119 @@
+@import "tailwindcss";
+@import "@fontsource-variable/archivo/wdth.css";
+
+/*
+ * Sistema visual de TokenARG
+ * --------------------------
+ * La referencia son los títulos valores impresos: papel de seguridad, tinta azul y
+ * guilloches. Cada categoría tiene su tinta, como las denominaciones de un billete.
+ * Tipografía: Archivo (Omnibus-Type, Buenos Aires). El ancho expandido se reserva para
+ * títulos y cifras; el texto corrido va en ancho normal.
+ */
+@theme {
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, monospace;
+
+  --color-paper: #f3f6fa;
+  --color-card: #ffffff;
+  --color-ink: #13294b;
+  --color-ink-muted: #4a5b76;
+  --color-ink-faint: #74839b;
+  --color-rule: #d6dee9;
+  --color-rule-strong: #b9c6d8;
+
+  --color-brand: #2453d6;
+  --color-brand-deep: #193d9f;
+  --color-brand-soft: #e6edfc;
+
+  /* Progreso de fondeo: celeste */
+  --color-celeste: #5fa3dd;
+  --color-celeste-soft: #e2eef9;
+
+  --color-yield: #0d7457;
+  --color-yield-soft: #e1f2ec;
+  --color-caution: #9a4a06;
+  --color-caution-soft: #fdf0e1;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdebe9;
+
+  --color-cat-inmuebles: #a33b2b;
+  --color-cat-agro: #5e6b12;
+  --color-cat-deuda: #1f6474;
+  --color-cat-empresas: #73284a;
+
+  --radius-card: 10px;
+  --radius-control: 8px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.55;
+    font-feature-settings: "kern", "liga";
+  }
+
+  /* Titulares: Archivo expandido. */
+  .display {
+    font-stretch: 125%;
+    font-weight: 780;
+    letter-spacing: -0.012em;
+    line-height: 1.04;
+  }
+
+  .heading {
+    font-stretch: 112.5%;
+    font-weight: 680;
+    letter-spacing: -0.006em;
+    line-height: 1.2;
+  }
+
+  .figure {
+    font-stretch: 112.5%;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-brand-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* El llenado de la barra de fondeo se anima una sola vez, al cargar. */
+@keyframes fill-in {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.funding-fill {
+  transform-origin: left center;
+  animation: fill-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
