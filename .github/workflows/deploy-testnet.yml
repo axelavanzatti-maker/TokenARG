@@ -1,14 +1,16 @@
 name: Deploy a testnet
 
-# Despliega los contratos de TokenARG en Polygon Amoy y/o Ethereum Sepolia y guarda las
-# direcciones en blockchain/deployments/<chainId>.json (las importa `npm run chain:sync`).
+# Despliega los contratos de TokenARG en Polygon Amoy y/o Ethereum Sepolia, guarda las
+# direcciones en blockchain/deployments/<chainId>.json (las importa `npm run chain:sync` y el
+# build de Vercel) y, si se pide, carga los datos de demo: rondas fondeadas y mercado abierto.
 #
 # Secrets (Settings → Secrets and variables → Actions → Secrets):
 #   DEPLOYER_PRIVATE_KEY   obligatoria: billetera con POL de Amoy y/o ETH de Sepolia para el gas
 #   AMOY_RPC_URL           opcional (por defecto, el RPC público de Polygon)
 #   SEPOLIA_RPC_URL        opcional (por defecto, el RPC público de PublicNode)
 # Variables (pestaña Variables), todas opcionales:
-#   KYC_AGENT_ADDRESS      billetera del backend que da de alta inversores (por defecto, el deployer)
+#   KYC_AGENT_ADDRESS      billetera del backend que da de alta inversores (por defecto, el deployer).
+#                          Si es otra, el deploy le pasa un poco de gas en cada red.
 #   TREASURY_ADDRESS, FEE_RECIPIENT_ADDRESS, ADMIN_ADDRESS, DOCS_BASE_URL
 
 on:
@@ -17,10 +19,19 @@ on:
       redes:
         description: "Redes"
         type: choice
-        options: [amoy-y-sepolia, amoy, sepolia]
-        default: amoy-y-sepolia
+        options: [sepolia, amoy, amoy-y-sepolia]
+        default: sepolia
+      accion:
+        description: "Qué hacer"
+        type: choice
+        options: [desplegar, solo-datos-de-demo]
+        default: desplegar
+      demo:
+        description: "Cargar datos de demo (ronda fondeada y órdenes en el mercado)"
+        type: boolean
+        default: true
       docs_base_url:
-        description: "URL pública de los PDF (ej. https://tokenarg.net.ar/docs). Vacío: la variable DOCS_BASE_URL o localhost."
+        description: "URL pública de los PDF. Vacío: la variable DOCS_BASE_URL o https://tokenarg.net.ar/docs"
         required: false
         default: ""
 
@@ -33,9 +44,9 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy en ${{ matrix.red }}
+    name: ${{ inputs.accion == 'desplegar' && 'Deploy' || 'Datos de demo' }} en ${{ matrix.red }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       # De a una: cada red hace su propio commit con las direcciones.
@@ -50,7 +61,8 @@ jobs:
       TREASURY_ADDRESS: ${{ vars.TREASURY_ADDRESS }}
       FEE_RECIPIENT_ADDRESS: ${{ vars.FEE_RECIPIENT_ADDRESS }}
       ADMIN_ADDRESS: ${{ vars.ADMIN_ADDRESS }}
-      DOCS_BASE_URL: ${{ inputs.docs_base_url || vars.DOCS_BASE_URL || 'http://localhost:3000/docs' }}
+      DOCS_BASE_URL: ${{ inputs.docs_base_url || vars.DOCS_BASE_URL || 'https://tokenarg.net.ar/docs' }}
+      WITH_DEMO: ${{ inputs.demo && '1' || '0' }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -67,28 +79,21 @@ jobs:
             exit 1
           fi
           if ! echo "$DEPLOYER_PRIVATE_KEY" | grep -Eq '^0x[0-9a-fA-F]{64}$'; then
-            echo "::error::DEPLOYER_PRIVATE_KEY tiene que ser 0x seguido de 64 caracteres hexadecimales."
+            echo "::error::DEPLOYER_PRIVATE_KEY tiene que ser 0x seguido de 64 caracteres hexadecimales (en MetaMask: Detalles de la cuenta → Mostrar clave privada; agregale 0x adelante si no lo tiene)."
             exit 1
           fi
       - run: npm ci
         working-directory: blockchain
       - name: Saldo para el gas
+        if: inputs.accion == 'desplegar'
         run: npx hardhat run scripts/preflight.ts --network ${{ matrix.red }}
         working-directory: blockchain
       - name: Desplegar
+        if: inputs.accion == 'desplegar'
         run: npx hardhat run scripts/deploy.ts --network ${{ matrix.red }}
         working-directory: blockchain
-      - name: Resumen
-        run: |
-          file=$(ls -t blockchain/deployments/*.json | head -1)
-          {
-            echo "### Contratos desplegados en ${{ matrix.red }}"
-            echo
-            echo '```json'
-            cat "$file"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
       - name: Guardar las direcciones en el repo
+        if: inputs.accion == 'desplegar'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -100,3 +105,23 @@ jobs:
             sleep 5
           done
           exit 1
+      - name: Datos de demo (ronda fondeada y mercado abierto)
+        if: inputs.demo || inputs.accion == 'solo-datos-de-demo'
+        run: npx hardhat run scripts/seed-testnet.ts --network ${{ matrix.red }}
+        working-directory: blockchain
+      - name: Resumen
+        if: always()
+        run: |
+          case "${{ matrix.red }}" in amoy) id=80002; url=https://amoy.polygonscan.com;; sepolia) id=11155111; url=https://sepolia.etherscan.io;; esac
+          file="blockchain/deployments/${id}.json"
+          [ -f "$file" ] || { echo "Todavía no hay contratos desplegados en ${{ matrix.red }}." >> "$GITHUB_STEP_SUMMARY"; exit 0; }
+          node -e '
+            const d = require(process.argv[1]); const url = process.argv[2];
+            const a = (x) => `[\`${x}\`](${url}/address/${x})`;
+            const lines = [`### Contratos en ${{ matrix.red }} (chainId ${d.chainId})`, "",
+              `| Contrato | Dirección |`, `|---|---|`,
+              `| IdentityRegistry | ${a(d.identityRegistry)} |`, `| P2PMarket | ${a(d.market.address)} |`,
+              `| PaymentRouter | ${a(d.paymentRouter)} |`, `| USDC de prueba | ${a(d.paymentToken.address)} |`,
+              ...Object.entries(d.projects).flatMap(([slug, p]) => [`| ${slug}: token | ${a(p.token)} |`, `| ${slug}: ronda | ${a(p.offering)} |`])];
+            console.log(lines.join("\n"));
+          ' "$PWD/$file" "$url" >> "$GITHUB_STEP_SUMMARY"

@@ -14,6 +14,28 @@ import { HttpError } from "@/server/errors";
 
 const USDC_DECIMALS = 6;
 const LOG_CHUNK = BigInt(process.env.SYNC_BLOCK_CHUNK ?? 5_000);
+const MIN_LOG_CHUNK = 50n;
+
+/**
+ * Recorre [from, head] en tramos y llama a `read` con cada uno. Si el RPC rechaza el tramo
+ * (muchos RPC públicos limitan eth_getLogs a 1.000 o 500 bloques), lo parte a la mitad y
+ * reintenta. Después de cada tramo llama a `done` para guardar el avance.
+ */
+async function scanBlocks(from: bigint, head: bigint, read: (from: bigint, to: bigint) => Promise<void>, done: (to: bigint) => Promise<void>) {
+  let chunk = LOG_CHUNK;
+  while (from <= head) {
+    const to = from + chunk - 1n < head ? from + chunk - 1n : head;
+    try {
+      await read(from, to);
+    } catch (error) {
+      if (chunk <= MIN_LOG_CHUNK) throw error;
+      chunk /= 2n;
+      continue;
+    }
+    await done(to);
+    from = to + 1n;
+  }
+}
 
 const STATUS_BY_STATE: Record<(typeof OFFERING_STATE)[number], ProjectStatus> = {
   Upcoming: "PROXIMAMENTE",
@@ -209,50 +231,53 @@ export async function syncProjectEvents(project: IndexedProject, toBlock?: bigin
   const offering = getAddress(project.offeringAddress);
   const token = getAddress(project.tokenAddress);
   const head = toBlock ?? (await client.getBlockNumber());
-  let from = (project.lastSyncedBlock ?? -1n) + 1n;
+  const from = (project.lastSyncedBlock ?? -1n) + 1n;
   const totals = { purchases: 0, refunds: 0, distributions: 0 };
 
-  while (from <= head) {
-    const to = from + LOG_CHUNK - 1n < head ? from + LOG_CHUNK - 1n : head;
-    // strict: descarta logs que no decodifican contra el ABI, así los args vienen siempre completos.
-    const range = { fromBlock: from, toBlock: to, strict: true } as const;
-    const [purchases, refunds, distributions] = await Promise.all([
-      client.getContractEvents({ address: offering, abi: tokenOfferingAbi, eventName: "TokensPurchased", ...range }),
-      client.getContractEvents({ address: offering, abi: tokenOfferingAbi, eventName: "Refunded", ...range }),
-      client.getContractEvents({ address: token, abi: assetTokenAbi, eventName: "DistributionDeposited", ...range }),
-    ]);
+  await scanBlocks(
+    from,
+    head,
+    async (fromBlock, toBlockChunk) => {
+      // strict: descarta logs que no decodifican contra el ABI, así los args vienen siempre completos.
+      const range = { fromBlock, toBlock: toBlockChunk, strict: true } as const;
+      const [purchases, refunds, distributions] = await Promise.all([
+        client.getContractEvents({ address: offering, abi: tokenOfferingAbi, eventName: "TokensPurchased", ...range }),
+        client.getContractEvents({ address: offering, abi: tokenOfferingAbi, eventName: "Refunded", ...range }),
+        client.getContractEvents({ address: token, abi: assetTokenAbi, eventName: "DistributionDeposited", ...range }),
+      ]);
 
-    for (const log of purchases) {
-      await upsertPurchase(project, chainId, log);
-      totals.purchases += 1;
-    }
-    for (const log of refunds) {
-      // refund() devuelve todo el aporte del inversor en esa ronda.
-      await prisma.investment.updateMany({
-        where: { projectId: project.id, investorWallet: getAddress(log.args.investor) },
-        data: { status: "REEMBOLSADA" },
-      });
-      totals.refunds += 1;
-    }
-    for (const log of distributions) {
-      const key = { chainId, txHash: log.transactionHash, logIndex: log.logIndex };
-      await prisma.distribution.upsert({
-        where: { chainId_txHash_logIndex: key },
-        create: {
-          ...key,
-          projectId: project.id,
-          amountUSD: usd(log.args.amount),
-          blockNumber: log.blockNumber,
-          executedAt: await blockTime(chainId, log.blockNumber),
-        },
-        update: {},
-      });
-      totals.distributions += 1;
-    }
-
-    await prisma.project.update({ where: { id: project.id }, data: { lastSyncedBlock: to } });
-    from = to + 1n;
-  }
+      for (const log of purchases) {
+        await upsertPurchase(project, chainId, log);
+        totals.purchases += 1;
+      }
+      for (const log of refunds) {
+        // refund() devuelve todo el aporte del inversor en esa ronda.
+        await prisma.investment.updateMany({
+          where: { projectId: project.id, investorWallet: getAddress(log.args.investor) },
+          data: { status: "REEMBOLSADA" },
+        });
+        totals.refunds += 1;
+      }
+      for (const log of distributions) {
+        const key = { chainId, txHash: log.transactionHash, logIndex: log.logIndex };
+        await prisma.distribution.upsert({
+          where: { chainId_txHash_logIndex: key },
+          create: {
+            ...key,
+            projectId: project.id,
+            amountUSD: usd(log.args.amount),
+            blockNumber: log.blockNumber,
+            executedAt: await blockTime(chainId, log.blockNumber),
+          },
+          update: {},
+        });
+        totals.distributions += 1;
+      }
+    },
+    async (to) => {
+      await prisma.project.update({ where: { id: project.id }, data: { lastSyncedBlock: to } });
+    },
+  );
 
   await refreshProjectSummary(project);
   return totals;
@@ -268,27 +293,31 @@ export async function syncMarket(chainId: number, toBlock?: bigint) {
   const projects = await prisma.project.findMany({ where: { chainId, tokenAddress: { not: null } }, select: { id: true, tokenAddress: true } });
   const byToken = new Map(projects.map((p) => [p.tokenAddress!.toLowerCase(), p.id]));
 
-  let from = (deployment.marketSyncedBlock ?? deployment.startBlock - 1n) + 1n;
+  const from = (deployment.marketSyncedBlock ?? deployment.startBlock - 1n) + 1n;
   let trades = 0;
-  while (from <= head) {
-    const to = from + LOG_CHUNK - 1n < head ? from + LOG_CHUNK - 1n : head;
-    const fills = await client.getContractEvents({
-      address: market,
-      abi: p2pMarketAbi,
-      eventName: "OrderFilled",
-      fromBlock: from,
-      toBlock: to,
-      strict: true,
-    });
-    for (const log of fills) {
-      const projectId = byToken.get(log.args.token.toLowerCase());
-      if (!projectId) continue;
-      await upsertTrade(projectId, chainId, log);
-      trades += 1;
-    }
-    await prisma.chainDeployment.update({ where: { chainId }, data: { marketSyncedBlock: to } });
-    from = to + 1n;
-  }
+  await scanBlocks(
+    from,
+    head,
+    async (fromBlock, toBlockChunk) => {
+      const fills = await client.getContractEvents({
+        address: market,
+        abi: p2pMarketAbi,
+        eventName: "OrderFilled",
+        fromBlock,
+        toBlock: toBlockChunk,
+        strict: true,
+      });
+      for (const log of fills) {
+        const projectId = byToken.get(log.args.token.toLowerCase());
+        if (!projectId) continue;
+        await upsertTrade(projectId, chainId, log);
+        trades += 1;
+      }
+    },
+    async (to) => {
+      await prisma.chainDeployment.update({ where: { chainId }, data: { marketSyncedBlock: to } });
+    },
+  );
   return { trades };
 }
 
@@ -399,20 +428,29 @@ export async function importDeployment(d: DeploymentFile) {
   return results;
 }
 
-/** Sincroniza proyectos y mercado de todas las redes activas. */
+/**
+ * Sincroniza proyectos y mercado de todas las redes activas. Cada red es independiente: si una
+ * no responde (RPC caído, límite de consultas), las demás se sincronizan igual y el error queda
+ * en `errors` para reintentar en la próxima corrida.
+ */
 export async function syncAllProjects() {
   const report: { chainId: number; slug: string; purchases: number; refunds: number; distributions: number }[] = [];
   const markets: { chainId: number; trades: number }[] = [];
   const heads: Record<number, string> = {};
+  const errors: { chainId: number; error: string }[] = [];
   for (const deployment of await activeDeployments()) {
     const chainId = deployment.chainId;
-    const head = await getPublicClient(chainId).getBlockNumber();
-    heads[chainId] = head.toString();
-    const projects = await prisma.project.findMany({ where: { chainId, offeringAddress: { not: null } }, select: PROJECT_SELECT });
-    for (const project of projects) {
-      report.push({ chainId, slug: project.slug, ...(await syncProjectEvents(project, head)) });
+    try {
+      const head = await getPublicClient(chainId).getBlockNumber();
+      heads[chainId] = head.toString();
+      const projects = await prisma.project.findMany({ where: { chainId, offeringAddress: { not: null } }, select: PROJECT_SELECT });
+      for (const project of projects) {
+        report.push({ chainId, slug: project.slug, ...(await syncProjectEvents(project, head)) });
+      }
+      markets.push({ chainId, ...(await syncMarket(chainId, head)) });
+    } catch (error) {
+      errors.push({ chainId, error: error instanceof Error ? error.message.split("\n")[0]! : String(error) });
     }
-    markets.push({ chainId, ...(await syncMarket(chainId, head)) });
   }
-  return { heads, report, markets };
+  return { heads, report, markets, errors };
 }

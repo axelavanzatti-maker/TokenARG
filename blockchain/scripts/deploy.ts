@@ -21,12 +21,19 @@
  *   MARKET_BUYER_FEE_BPS / MARKET_SELLER_FEE_BPS  comisión por parte (default 50 = 0,5 %).
  *   ADMIN_ADDRESS         multisig del fiduciario: recibe todos los roles y el deployer renuncia.
  *   DOCS_BASE_URL         URL pública de los PDF (default: http://localhost:3000/docs).
+ *   AGENT_GAS_TOPUP       testnet: gas que el deployer le pasa al agente KYC si es otra billetera
+ *                         (default: 0,2 POL en Amoy, 0,01 ETH en Sepolia; "0" para no pasarle nada).
+ *   LIVE_WINDOWS=1        en una red local, usa las ventanas de testnet (para probar el deploy de testnet).
  *   CONFIRM_MAINNET=1     obligatorio en Polygon/Ethereum mainnet (ver config/mainnet.json).
+ *
+ * En testnet no hay una simulación que recorra la historia: las rondas se abren de verdad. Los
+ * proyectos que en la demo ya estaban fondeados abren ahora (seed-testnet.ts completa su cupo y
+ * abre el mercado) y los que cerrarían en menos de una semana se extienden a 21 días.
  *
  * Resultado: blockchain/deployments/<chainId>.json, que la app importa con `npm run chain:sync`.
  */
 import { network } from "hardhat";
-import { getAddress, isAddress, parseUnits, zeroAddress, type Address } from "viem";
+import { formatEther, getAddress, isAddress, parseEther, parseUnits, zeroAddress, type Address } from "viem";
 import {
   DAY,
   chainInfo,
@@ -41,6 +48,7 @@ import {
   wallClockSeconds,
   type Deployment,
   type PaymentAsset,
+  type ProjectData,
 } from "./lib/common.js";
 
 function envAddress(name: string): Address | undefined {
@@ -164,6 +172,16 @@ const registryAddress = getAddress(registry.address);
 console.log(`IdentityRegistry    ${registryAddress}`);
 await confirm(publicClient, registry.write.grantRole([await registry.read.AGENT_ROLE(), kycAgent]));
 console.log(`  AGENT_ROLE  →     ${kycAgent}`);
+// En testnet, si el agente es otra billetera, el deployer le pasa gas para las altas de inversores
+// (así alcanza con conseguir moneda de prueba para una sola billetera).
+if (chain.kind === "testnet" && kycAgent !== deployerAddress) {
+  const target = parseEther(process.env.AGENT_GAS_TOPUP ?? (chain.family === "polygon" ? "0.2" : "0.01"));
+  const agentBalance = await publicClient.getBalance({ address: kycAgent });
+  if (target > agentBalance) {
+    await confirm(publicClient, deployer.sendTransaction({ to: kycAgent, value: target - agentBalance }));
+    console.log(`  gas para el agente: ${formatEther(target - agentBalance)} ${nativeSymbol}`);
+  }
+}
 
 // 4. Mercado secundario ------------------------------------------------------------------------------
 const MIN_ORDER_VALUE_USD = 10;
@@ -183,6 +201,22 @@ const startBlock = Number(await publicClient.getBlockNumber());
 // Las ventanas de las rondas se fijan con el reloj real. En la red local, el nodo arranca en el
 // pasado y la simulación lo trae al presente recorriendo la historia.
 const now = wallClockSeconds();
+const liveWindows = chain.kind !== "local" || process.env.LIVE_WINDOWS === "1";
+
+/** Apertura y cierre de la ronda de un proyecto en esta red. */
+function offeringWindow(p: ProjectData) {
+  const start = now + BigInt(p.offering.opensInDays) * DAY;
+  const end = now + BigInt(p.offering.closesInDays) * DAY;
+  if (!liveWindows) return { start, end };
+  // Fondeado en la historia de demo: abre ahora; seed-testnet.ts completa el cupo y la cierra.
+  if (chain.kind !== "mainnet" && p.demo.market) return { start: now - DAY, end: now + 30n * DAY };
+  // Que ninguna ronda abierta cierre en menos de una semana.
+  if (p.offering.closesInDays < 7) {
+    const extended = now + 21n * DAY;
+    return { start: start < extended ? start : now, end: extended };
+  }
+  return { start, end };
+}
 const deployment: Deployment = {
   chainId,
   family: chain.family,
@@ -207,8 +241,7 @@ for (const p of projects) {
   const documentHash = await sha256OfPublicFile(doc.file);
   const price = usdToUnits(p.tokenPriceUSD);
   const hardCap = usdToUnits(p.targetAmountUSD);
-  const startTime = now + BigInt(p.offering.opensInDays) * DAY;
-  const endTime = now + BigInt(p.offering.closesInDays) * DAY;
+  const { start: startTime, end: endTime } = offeringWindow(p);
 
   const token = await viem.deployContract("AssetToken", [
     {
@@ -287,5 +320,8 @@ if (chain.kind === "local") {
     console.log(`\nEl nodo local está ${Math.round(lagDays)} días en el pasado a propósito: corré`);
     console.log("`npm run chain:simulate` para generar la historia de la demo y traerlo a hoy.");
   }
+}
+if (chain.kind === "testnet") {
+  console.log("\nPara que la demo tenga una ronda fondeada y el mercado abierto: `npx hardhat run scripts/seed-testnet.ts --network <red>`.");
 }
 console.log("\nSiguiente paso: `npm run chain:sync` en la raíz para cargar las direcciones en la base de datos.");

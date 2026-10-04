@@ -1,9 +1,12 @@
 /**
  * Carga el catálogo de proyectos de ejemplo (data/projects.json) y sus documentos.
  *
- * Es idempotente: se puede correr las veces que haga falta. Los montos recaudados que deja
- * son los de la demo; en cuanto haya contratos desplegados, `npm run chain:sync` los
- * reemplaza por los reales de la blockchain.
+ * Es idempotente: se puede correr las veces que haga falta (en Vercel corre en cada deploy).
+ *
+ * - En modo local deja los montos de la demo hasta que `npm run chain:sync` los reemplace por
+ *   los de la blockchain. En testnet y mainnet arranca en cero: no se muestran montos inventados.
+ * - En un proyecto que ya tiene contratos, solo actualiza el catálogo (textos, imágenes, métricas
+ *   del activo): recaudación, inversores, estado y fechas los define la blockchain.
  *
  * Uso: npm run db:seed
  */
@@ -59,16 +62,16 @@ async function fileInfo(relative: string) {
 async function main() {
   const projects = JSON.parse(await readFile(path.join(ROOT, "data", "projects.json"), "utf8")) as SeedProject[];
   const now = Date.now();
+  const demoAmounts = (process.env.NEXT_PUBLIC_NETWORK_MODE ?? "local") === "local";
 
   for (const p of projects) {
-    const collected = Math.round((p.targetAmountUSD * p.demo.fundedPct) / 100);
-    const data = {
+    const collected = demoAmounts ? Math.round((p.targetAmountUSD * p.demo.fundedPct) / 100) : 0;
+    const catalog = {
       title: p.title,
       summary: p.summary,
       description: p.description.join("\n\n"),
       category: p.category,
       network: p.network,
-      status: p.status,
       location: p.location,
       issuer: p.issuer,
       trustee: p.trustee,
@@ -77,23 +80,28 @@ async function main() {
       images: p.images,
       targetAmountUSD: p.targetAmountUSD,
       softCapUSD: p.softCapUSD,
-      collectedAmountUSD: collected,
-      investorCount: collected > 0 ? Math.max(1, Math.round(collected / (p.minTicketUSD * 6))) : 0,
       minTicketUSD: p.minTicketUSD,
       tokenPriceUSD: p.tokenPriceUSD,
       estimatedIrr: p.estimatedIrr,
       capRate: p.capRate,
       termMonths: p.termMonths,
       assetValuationUSD: p.assetValuationUSD,
-      opensAt: new Date(now + p.offering.opensInDays * DAY_MS),
-      closesAt: new Date(now + p.offering.closesInDays * DAY_MS),
       tokenSymbol: p.token.symbol,
     };
+    // Lo que, una vez desplegado el proyecto, sale de la blockchain.
+    const onchainFields = {
+      status: demoAmounts || p.status === "PROXIMAMENTE" || p.status === "FONDEANDO" ? p.status : "PROXIMAMENTE",
+      collectedAmountUSD: collected,
+      investorCount: collected > 0 ? Math.max(1, Math.round(collected / (p.minTicketUSD * 6))) : 0,
+      opensAt: new Date(now + p.offering.opensInDays * DAY_MS),
+      closesAt: new Date(now + p.offering.closesInDays * DAY_MS),
+    };
 
+    const existing = await prisma.project.findUnique({ where: { slug: p.slug }, select: { chainId: true } });
     const project = await prisma.project.upsert({
       where: { slug: p.slug },
-      create: { slug: p.slug, ...data },
-      update: data,
+      create: { slug: p.slug, ...catalog, ...onchainFields },
+      update: existing?.chainId != null ? catalog : { ...catalog, ...onchainFields },
     });
 
     await prisma.document.deleteMany({ where: { projectId: project.id } });
