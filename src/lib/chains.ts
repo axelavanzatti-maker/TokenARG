@@ -89,9 +89,18 @@ const PUBLIC_RPC: Record<number, string | undefined> = {
   1: process.env.NEXT_PUBLIC_RPC_URL_1,
 };
 
+/**
+ * RPC por defecto en testnet cuando no hay uno configurado: los de PublicNode, los mismos que usa
+ * el workflow de deploy (respondieron bien desde GitHub Actions; el oficial de Amoy, no).
+ */
+const DEFAULT_PUBLIC_RPC: Record<number, string | undefined> = {
+  80002: "https://polygon-amoy-bor-rpc.publicnode.com",
+  11155111: "https://ethereum-sepolia-rpc.publicnode.com",
+};
+
 /** RPC para el navegador. En producción conviene uno propio (Alchemy, Infura, QuickNode). */
 export function publicRpcUrl(chain: Chain): string {
-  return PUBLIC_RPC[chain.id] || chain.rpcUrls.default.http[0]!;
+  return PUBLIC_RPC[chain.id] || DEFAULT_PUBLIC_RPC[chain.id] || chain.rpcUrls.default.http[0]!;
 }
 
 /** RPC para el servidor: RPC_URL_<chainId> si está definida (privado), si no el público. */
