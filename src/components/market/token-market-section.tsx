@@ -1,5 +1,5 @@
 import { ChainLink } from "@/components/chain-link";
-import { formatDate, formatNumber, formatPrice, formatUSD, shortAddress } from "@/lib/format";
+import { formatDate, formatNumber, formatPrice, formatUSD } from "@/lib/format";
 import type { ChainInfo, MarketChart } from "@/lib/types";
 import { MarketPanel } from "./market-panel";
 import { MarketStatsStrip } from "./market-stats";
@@ -53,14 +53,13 @@ export function TokenMarketSection({
         <div>
           <h3 className="heading text-base text-ink">Últimas operaciones</h3>
           <div className="relative mt-2 overflow-x-auto rounded-[var(--radius-card)] border border-rule bg-card">
-            <table className="w-full min-w-[680px] text-sm">
+            <table className="w-full min-w-[560px] text-sm">
               <thead className="border-b border-rule text-left text-ink-muted">
                 <tr>
                   <th scope="col" className="px-4 py-2.5 font-medium">Fecha</th>
                   <th scope="col" className="px-4 py-2.5 text-right font-medium">Precio</th>
                   <th scope="col" className="px-4 py-2.5 text-right font-medium">Cantidad</th>
                   <th scope="col" className="px-4 py-2.5 text-right font-medium">Valor</th>
-                  <th scope="col" className="px-4 py-2.5 font-medium">Comprador / vendedor</th>
                   <th scope="col" className="px-4 py-2.5 font-medium">Transacción</th>
                 </tr>
               </thead>
@@ -73,10 +72,7 @@ export function TokenMarketSection({
                       {formatNumber(t.tokenAmount, 4)} {symbol}
                     </td>
                     <td className="tabular px-4 py-2.5 text-right whitespace-nowrap">{formatUSD(t.valueUSD, { cents: true })}</td>
-                    <td className="px-4 py-2.5 font-mono text-[0.8125rem] whitespace-nowrap text-ink-muted">
-                      {shortAddress(t.buyer)} ← {shortAddress(t.seller)}
-                    </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-4 py-2.5 whitespace-nowrap">
                       <ChainLink kind="tx" value={t.txHash} chainId={chain.chainId} />
                     </td>
                   </tr>
