@@ -13,9 +13,11 @@ import { HttpError } from "@/server/errors";
  * moneda nativa (POL/ETH) en cada red para pagar el gas. En producción, la clave va en un KMS.
  */
 function agentAccount() {
-  const key = process.env.KYC_AGENT_PRIVATE_KEY;
-  if (!key || !/^0x[0-9a-fA-F]{64}$/.test(key)) {
-    throw new HttpError(503, "KYC_AGENT_PRIVATE_KEY no está configurada", "chain_not_configured");
+  // MetaMask exporta la clave sin "0x": se acepta de las dos formas.
+  const raw = process.env.KYC_AGENT_PRIVATE_KEY?.trim() ?? "";
+  const key = /^[0-9a-fA-F]{64}$/.test(raw) ? `0x${raw}` : raw;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(key)) {
+    throw new HttpError(503, "KYC_AGENT_PRIVATE_KEY no está configurada o no es una clave válida", "chain_not_configured");
   }
   return privateKeyToAccount(key as `0x${string}`);
 }
