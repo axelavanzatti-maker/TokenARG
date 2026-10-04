@@ -34,6 +34,36 @@ jobs:
       - run: npm run typecheck
         working-directory: blockchain
 
+  testnet:
+    name: Deploy de testnet (ensayo en un nodo local)
+    runs-on: ubuntu-latest
+    needs: [contratos]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: blockchain/package-lock.json
+      - run: npm ci
+        working-directory: blockchain
+      - name: Nodo local con la fecha de hoy
+        working-directory: blockchain
+        run: |
+          nohup npx hardhat node --port 8545 > node.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -s -X POST -H 'content-type: application/json' --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}' http://127.0.0.1:8545 | grep -q result && exit 0
+            sleep 1
+          done
+          cat node.log; exit 1
+      - name: Deploy con las ventanas de testnet y datos de demo (dos veces, para probar que es idempotente)
+        working-directory: blockchain
+        run: |
+          npx hardhat run scripts/preflight.ts --network localhost
+          LIVE_WINDOWS=1 npx hardhat run scripts/deploy.ts --network localhost
+          ALLOW_DEMO_SEED=1 npx hardhat run scripts/seed-testnet.ts --network localhost
+          ALLOW_DEMO_SEED=1 npx hardhat run scripts/seed-testnet.ts --network localhost
+
   app:
     name: App (tipos, lint, build)
     runs-on: ubuntu-latest
@@ -107,7 +137,8 @@ jobs:
           cat nodes.log; exit 1
       - name: Deploy + historia simulada + índice
         run: npm run demo:local
-      - run: npm run build
+      - name: Build como en Vercel (migraciones, catálogo, sincronización y build)
+        run: npm run vercel-build
       - name: App en http://localhost:3000
         run: |
           nohup npm start > next.log 2>&1 &

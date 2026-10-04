@@ -143,31 +143,73 @@ Si reiniciás los nodos, hacé dos cosas:
 
 ## Testnet: Polygon Amoy + Ethereum Sepolia
 
-El deploy corre en GitHub Actions, así la clave nunca pasa por ninguna computadora ni por el chat.
+El deploy corre en GitHub Actions, así la clave nunca pasa por ninguna computadora ni por el chat. Se puede arrancar con una sola red (por ejemplo, Sepolia) y sumar la otra después: los proyectos de la red que falta muestran "Contratos pendientes".
 
-1. **Billetera de deploy.** Creá una billetera nueva solo para testnet. No uses una con fondos reales. Cargale gas de prueba:
-   - POL de Amoy en la [canilla de Polygon](https://faucet.polygon.technology/);
-   - ETH de Sepolia en la [canilla de Google Cloud](https://cloud.google.com/application/web3/faucet/ethereum/sepolia).
+1. **Billeteras.** En MetaMask, usá dos cuentas nuevas, solo para testnet:
+   - **deploy**: despliega y administra los contratos. Es la única que necesita moneda de prueba.
+   - **agente KYC**: la usa la app para dar de alta inversores. El deploy le pasa el gas que necesita.
+2. **Gas de prueba** para la cuenta de deploy:
+   - **Sepolia (ETH):** la [canilla de Google Cloud](https://cloud.google.com/application/web3/faucet/ethereum/sepolia).
+   - **Amoy (POL):**
+     - la [canilla de Polygon](https://faucet.polygon.technology/);
+     - [Alchemy](https://www.alchemy.com/faucets/polygon-amoy): 0,5 POL por día con una cuenta gratuita, que se crea con email;
+     - [QuickNode](https://faucet.quicknode.com/polygon/amoy): conectando MetaMask;
+     - [GetBlock](https://getblock.io/faucet/matic-amoy/).
 
-   Un deploy completo usa unos 19 millones de gas por red. El workflow controla el saldo antes de empezar y avisa cuánto falta.
-2. **Secrets.** En GitHub, entrá a *Settings → Secrets and variables → Actions*.
-   - En la pestaña *Secrets*, cargá `DEPLOYER_PRIVATE_KEY`, con formato `0x` + 64 caracteres hexadecimales.
-   - Opcional: `AMOY_RPC_URL` y `SEPOLIA_RPC_URL` (Alchemy, Infura). Sin ellos se usan los RPC públicos.
-   - En la pestaña *Variables*, opcional: `KYC_AGENT_ADDRESS`, con la dirección de la billetera del backend que habilita inversores. Si no la ponés, el rol queda en la billetera de deploy.
-3. **Deploy.** En *Actions → Deploy a testnet → Run workflow*, elegí `amoy-y-sepolia`. Al terminar, el workflow:
-   - publica las direcciones en el resumen de la corrida;
-   - commitea `blockchain/deployments/80002.json` y `11155111.json`.
-4. **App en modo testnet.** En el `.env` del servidor (por ejemplo, en Vercel):
-   - `NEXT_PUBLIC_NETWORK_MODE=testnet`
-   - `KYC_AGENT_PRIVATE_KEY`: la clave de la billetera agente. Necesita POL y ETH de prueba para el gas.
-   - `RPC_URL_80002` y `RPC_URL_11155111`: RPC privados.
-   - `ALLOW_MOCK_KYC=true`, si querés una demo pública con el KYC simulado.
+   Un deploy completo usa unos 19 millones de gas por red, y los datos de demo unos 4 millones más. El workflow controla el saldo antes de empezar y avisa cuánto falta.
+3. **GitHub.** Entrá a *Settings → Secrets and variables → Actions*:
+   - pestaña *Secrets*: `DEPLOYER_PRIVATE_KEY`, la clave privada de la cuenta de deploy (`0x` + 64 caracteres hexadecimales);
+   - pestaña *Variables*: `KYC_AGENT_ADDRESS`, la dirección pública de la cuenta del agente.
+   - Opcional, en *Secrets*: `AMOY_RPC_URL` y `SEPOLIA_RPC_URL` (Alchemy, Infura). Sin ellos se usan los RPC públicos.
+4. **Deploy.** En *Actions → Deploy a testnet → Run workflow*, elegí la red (`sepolia`, `amoy` o las dos) y dejá tildado "Cargar datos de demo". El workflow:
+   - despliega;
+   - commitea `blockchain/deployments/<chainId>.json`;
+   - completa la ronda de los proyectos que en la demo ya estaban fondeados y publica órdenes de compra y venta, así el mercado P2P se puede usar desde el primer día;
+   - deja las direcciones, con enlaces al explorador, en el resumen de la corrida.
 
-   Después corré `npm run chain:sync` y programá un cron que llame a `GET /api/cron/sync` con `Authorization: Bearer $CRON_SECRET`.
+   Si los datos de demo fallan por falta de gas, cargá más y corré de nuevo con la acción `solo-datos-de-demo`.
 
-Sin GitHub Actions también funciona: `npx hardhat keystore set DEPLOYER_PRIVATE_KEY`, y después `npm --prefix blockchain run deploy:amoy` y `deploy:sepolia`.
+Sin GitHub Actions también funciona:
 
-En mainnet, el deploy exige `CONFIRM_MAINNET=1`, usa USDC real y Uniswap V3 (`config/mainnet.json`), y el KYC simulado queda bloqueado.
+```bash
+npx hardhat keystore set DEPLOYER_PRIVATE_KEY
+npm --prefix blockchain run deploy:sepolia
+npx hardhat run scripts/seed-testnet.ts --network sepolia   # en blockchain/
+```
+
+En mainnet, el deploy exige `CONFIRM_MAINNET=1`, usa USDC real y Uniswap V3 (`config/mainnet.json`), y el KYC simulado queda bloqueado. Los datos de demo no se cargan nunca en mainnet.
+
+## Publicar la app en tokenarg.net.ar
+
+La app corre en [Vercel](https://vercel.com) con una base Postgres de [Neon](https://neon.tech). Los dos tienen plan gratuito para la demo. El plan Hobby de Vercel es para uso personal y no comercial: para operar el negocio, pasá a Pro.
+
+1. **Proyecto.** En vercel.com, entrá con tu cuenta de GitHub. Andá a *Add New → Project* e importá `TokenARG`. Vercel detecta Next.js solo y no hace falta tocar el comando de build. El script `vercel-build` hace esto:
+   - aplica las migraciones;
+   - carga el catálogo de proyectos;
+   - importa los contratos de `blockchain/deployments/`;
+   - compila la app.
+2. **Base de datos.** En el proyecto, andá a *Storage → Create Database → Neon* y conectala. Vercel agrega `DATABASE_URL` y `DATABASE_URL_UNPOOLED`.
+3. **Variables.** En *Settings → Environment Variables*, cargá estas. Para los secretos, usá textos al azar: `openssl rand -base64 48` o el generador de tu gestor de contraseñas.
+
+   | Variable | Valor |
+   |---|---|
+   | `NEXT_PUBLIC_NETWORK_MODE` | `testnet` |
+   | `NEXT_PUBLIC_APP_URL` | `https://tokenarg.net.ar` |
+   | `SESSION_SECRET` | 48 caracteres al azar |
+   | `CRON_SECRET` | 32 caracteres al azar (Vercel lo usa para autenticar el cron diario) |
+   | `KYC_WEBHOOK_SECRET` | 32 caracteres al azar |
+   | `KYC_PROVIDER` / `ALLOW_MOCK_KYC` | `mock` / `true` (KYC simulado para la demo) |
+   | `KYC_AGENT_PRIVATE_KEY` | clave privada de la cuenta del agente KYC |
+   | `RPC_URL_11155111` / `RPC_URL_80002` | opcional: RPC privados (Alchemy) para Sepolia y Amoy |
+
+   Después, *Deployments → Redeploy*.
+4. **Dominio.**
+   - En Vercel, entrá a *Settings → Domains* y agregá `tokenarg.net.ar` y `www.tokenarg.net.ar`. Elegí la opción de *nameservers* de Vercel.
+   - En [nic.ar](https://nic.ar/), entrá a *Mis dominios → tokenarg.net.ar → Delegar*. Cargá `ns1.vercel-dns.com` y `ns2.vercel-dns.com`.
+
+   La delegación tarda desde minutos hasta unas horas. Vercel emite el certificado HTTPS solo.
+
+Cada vez que el workflow de deploy commitea direcciones nuevas, Vercel vuelve a desplegar y las importa. `vercel.json` programa una sincronización diaria con la blockchain. Las compras y las operaciones del mercado se registran al instante desde la propia app.
 
 ## Variables de entorno
 
@@ -198,6 +240,7 @@ Las direcciones de los contratos no van en el `.env`: salen de `blockchain/deplo
 | `npm run chain:deploy:local` | Despliega en las dos redes locales |
 | `npm --prefix blockchain run deploy:amoy` / `deploy:sepolia` | Despliega en testnet desde tu máquina |
 | `npm run chain:simulate` | Historia de demo: KYC, compras, cierres, rentas y mercado (solo redes locales) |
+| `npx hardhat run scripts/seed-testnet.ts --network sepolia` | Datos de demo en testnet: ronda fondeada y órdenes en el mercado (en `blockchain/`) |
 | `npm run chain:sync` | Importa los deploys de las redes activas y sincroniza el índice |
 | `npm run demo:local` | Las tres anteriores en orden |
 | `npm run abis` | Regenera `src/lib/contracts/abis.ts` desde los contratos compilados |
@@ -330,14 +373,11 @@ Para mover USDC entre Ethereum, Polygon y Solana existe CCTP de Circle. El backe
 
 ## Dominio
 
-`tokenarg.com` y `tokenarg.com.ar` figuran registrados desde el 26/09/2025 (consulta RDAP del 04/10/2026). Si no son tuyos, hay opciones:
-
-- **`.ar`** en [NIC Argentina](https://nic.ar/). Se registra con CUIT/CUIL. `tokenarg.net.ar` aparecía libre.
-- **`.com` y otros** en [Cloudflare Registrar](https://www.cloudflare.com/products/registrar/), [Namecheap](https://www.namecheap.com/) o [Porkbun](https://porkbun.com/).
+El dominio del proyecto es **tokenarg.net.ar**, registrado en NIC Argentina. Para publicar la app ahí, seguí [Publicar la app en tokenarg.net.ar](#publicar-la-app-en-tokenargnetar). `tokenarg.com` y `tokenarg.com.ar` están registrados por terceros desde el 26/09/2025.
 
 ## Próximos pasos sugeridos
 
-1. **Deploy en testnet**: cargar el secret y correr el workflow (ver arriba). Publicar la app en Vercel en modo `testnet`.
+1. **Demo pública**: deploy en testnet con el workflow y la app en tokenarg.net.ar (ver arriba).
 2. **Proveedor KYC real**: un adaptador en `src/server/kyc/provider.ts` (Didit, Truora, RENAPER a través de un integrador).
 3. **Pagos en pesos**: cuenta recaudadora (banco o PSP) que acredite USDC o emita los tokens al confirmarse la transferencia.
 4. **Panel del fiduciario**: publicar proyectos, cargar documentos, depositar rentas, habilitar el mercado, pausar y cancelar, firmando con la multisig.

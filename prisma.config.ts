@@ -17,7 +17,9 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    // Opcional para `prisma generate`; obligatoria para migrar y sembrar.
-    url: process.env.DATABASE_URL,
+    // Opcional para `prisma generate`; obligatoria para migrar y sembrar. Las migraciones van por
+    // una conexión directa si existe (Neon/Vercel: DATABASE_URL_UNPOOLED): el pooler en modo
+    // transacción no soporta los bloqueos que usa `migrate deploy`.
+    url: process.env.DATABASE_URL_UNPOOLED ?? process.env.DIRECT_DATABASE_URL ?? process.env.DATABASE_URL,
   },
 });
