@@ -214,6 +214,20 @@ La app corre en [Vercel](https://vercel.com) con una base Postgres de [Neon](htt
 
 Cada vez que el workflow de deploy commitea direcciones nuevas, Vercel vuelve a desplegar y las importa. `vercel.json` programa una sincronización diaria con la blockchain. Las compras y las operaciones del mercado se registran al instante desde la propia app.
 
+### Sin entrar al panel de Vercel
+
+Los pasos 3 y 4 los puede hacer el workflow *Publicar en Vercel* (`.github/workflows/vercel.yml`), con un token de Vercel:
+
+1. En vercel.com, entrá a *Account Settings → Tokens → Create*. Elegí tu equipo como alcance y un vencimiento.
+2. En GitHub, cargalo en *Settings → Secrets and variables → Actions → New repository secret*, con el nombre `VERCEL_TOKEN`.
+3. En *Actions → Publicar en Vercel → Run workflow*, corré la acción `configurar-y-publicar`. El workflow:
+   - carga las variables de entorno. `SESSION_SECRET` y `CRON_SECRET` se generan al azar solo si faltan, y nunca se muestran. La clave del agente KYC sale del secret `KYC_AGENT_PRIVATE_KEY` o, si el agente es la misma billetera que desplegó, del secret del deployer;
+   - publica `main` en producción y espera el resultado. Si el build falla, el error queda como aviso en la corrida;
+   - agrega `tokenarg.net.ar` y `www.tokenarg.net.ar`, que redirige al principal, y avisa si la delegación en nic.ar todavía no apunta a Vercel;
+   - revisa el sitio publicado: inicio, mercado, inicio de sesión y que se vean los contratos de cada red.
+
+La delegación en nic.ar se sigue haciendo a mano. La acción `revisar` solo controla el último deploy, el dominio y el sitio.
+
 ## Variables de entorno
 
 Todas están documentadas en `.env.example`. Las principales:
