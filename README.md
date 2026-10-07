@@ -156,7 +156,7 @@ El deploy corre en GitHub Actions, así la clave nunca pasa por ninguna computad
      - [QuickNode](https://faucet.quicknode.com/polygon/amoy): conectando MetaMask;
      - [GetBlock](https://getblock.io/faucet/matic-amoy/).
 
-   Un deploy completo usa unos 19 millones de gas por red, y los datos de demo unos 4 millones más. El workflow controla el saldo antes de empezar y avisa cuánto falta.
+   Un deploy completo usa unos 19 millones de gas por red, y los datos de demo unos 2,2 millones más. En Amoy, con el gas a 30 gwei, eso son unos 0,85 POL contando el margen. El workflow controla el saldo antes de empezar y avisa cuánto falta.
 3. **GitHub.** Entrá a *Settings → Secrets and variables → Actions*:
    - pestaña *Secrets*: `DEPLOYER_PRIVATE_KEY`, la clave privada de la cuenta de deploy (en MetaMask: *Detalles de la cuenta → Mostrar clave privada*; con o sin `0x` adelante);
    - pestaña *Variables*: `KYC_AGENT_ADDRESS`, la dirección pública de la cuenta del agente.

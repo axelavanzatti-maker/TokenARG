@@ -1,7 +1,7 @@
 /**
  * Control previo al deploy en una red pública: muestra la billetera que despliega y corta con
  * un mensaje claro si no le alcanza el saldo para el gas. Un deploy completo usa ~19 M de gas y
- * los datos de demo (seed-testnet.ts) ~4 M más; además, en testnet el deployer le pasa gas al
+ * los datos de demo (seed-testnet.ts) ~2,2 M más; además, en testnet el deployer le pasa gas al
  * agente KYC si es otra billetera.
  *
  * Uso: npx hardhat run scripts/preflight.ts --network amoy | sepolia
@@ -12,9 +12,11 @@ import { network } from "hardhat";
 import { formatEther, formatGwei, getAddress, isAddress, parseEther } from "viem";
 import { chainInfo } from "./lib/common.js";
 
-/** Gas medido en la red local: deploy completo ~19 M; datos de demo ~4 M. */
+/** Gas medido en un nodo local con los proyectos de Polygon: deploy 18,8 M; datos de demo 2,2 M. */
 const DEPLOY_GAS = 19_000_000n;
-const DEMO_GAS = 4_000_000n;
+const DEMO_GAS = 2_500_000n;
+/** En Amoy el gas suele estar entre 25 y 35 gwei; por encima, conviene esperar a que baje. */
+const AMOY_USUAL_GWEI = 35n;
 const FAUCETS: Record<number, string> = {
   80002: "https://faucet.polygon.technology/",
   11155111: "https://cloud.google.com/application/web3/faucet/ethereum/sepolia",
@@ -54,9 +56,11 @@ if (process.env.GITHUB_STEP_SUMMARY) {
 
 if (balance < needed) {
   const faucet = FAUCETS[chainId];
+  const expensive = chain.family === "polygon" && gasPrice > AMOY_USUAL_GWEI * 10n ** 9n;
   const message =
     `Saldo insuficiente en ${chain.name}: faltan ~${formatEther(needed - balance)} ${symbol}.` +
-    (faucet ? ` Cargá ${symbol} de prueba en ${faucet} para ${address} y volvé a correr el deploy.` : "");
+    (faucet ? ` Cargá ${symbol} de prueba en ${faucet} para ${address} y volvé a correr el deploy.` : "") +
+    (expensive ? ` Ahora el gas está caro (${formatGwei(gasPrice)} gwei; lo habitual es 25 a 35): si baja, alcanza con menos.` : "");
   console.error(`\n${message}`);
   if (process.env.GITHUB_ACTIONS) console.log(`::error title=Falta gas en ${chain.name}::${message}`);
   process.exitCode = 1;
