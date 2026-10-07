@@ -146,7 +146,11 @@ jobs:
           cat next.log; exit 1
       - name: Prueba de humo de la API
         run: npm run smoke
-      - run: npx playwright install --with-deps chromium
+      - name: Navegador para las pruebas e2e
+        # Las imágenes de GitHub ya traen las bibliotecas de Chrome, así que no hace falta apt
+        # (--with-deps), que a veces se cuelga con el espejo de Ubuntu.
+        timeout-minutes: 10
+        run: npx playwright install chromium
       - name: Pruebas e2e (alta, inversión con USDC y ETH, mercado P2P, cartera, móvil)
         run: npm run test:e2e
       - name: Capturas y logs
