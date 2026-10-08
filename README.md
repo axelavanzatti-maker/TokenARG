@@ -218,7 +218,7 @@ Cada vez que el workflow de deploy commitea direcciones nuevas, Vercel vuelve a 
 
 Los pasos 3 y 4 los puede hacer el workflow *Publicar en Vercel* (`.github/workflows/vercel.yml`), con un token de Vercel:
 
-1. En vercel.com, entrá a *Account Settings → Tokens → Create*. Elegí tu equipo como alcance y un vencimiento.
+1. En [vercel.com/account/tokens](https://vercel.com/account/tokens), creá un token con el alcance de tu equipo (*All Projects*) y un vencimiento corto. Un token de un solo proyecto también sirve, pero no puede agregar dominios ni ver su configuración.
 2. En GitHub, cargalo en *Settings → Secrets and variables → Actions → New repository secret*, con el nombre `VERCEL_TOKEN`.
 3. En *Actions → Publicar en Vercel → Run workflow*, corré la acción `configurar-y-publicar`. El workflow:
    - carga las variables de entorno. `SESSION_SECRET` y `CRON_SECRET` se generan al azar solo si faltan, y nunca se muestran. La clave del agente KYC sale del secret `KYC_AGENT_PRIVATE_KEY` o, si el agente es la misma billetera que desplegó, del secret del deployer;
