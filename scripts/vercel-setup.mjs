@@ -72,21 +72,29 @@ async function api(method, url, body) {
   }
 }
 
-/** El proyecto, en la cuenta personal o en alguno de los equipos a los que llega el token. */
+/**
+ * El proyecto. Con un token de equipo o de proyecto, Vercel deduce el equipo solo; con uno de
+ * cuenta completa, el proyecto puede estar en cualquiera de los equipos.
+ */
 async function findProject() {
+  const direct = await api("GET", `/v9/projects/${encodeURIComponent(projectName)}`);
+  if (direct.ok) return direct.json;
+  // Un token de proyecto no puede listar equipos: este pedido falla y no importa.
   const teams = await api("GET", "/v2/teams?limit=50");
-  if (teams.status === 401 || teams.status === 403) {
-    fail("Token de Vercel", "Vercel rechazó VERCEL_TOKEN: venció, se revocó o no tiene acceso a tu equipo. Creá otro en vercel.com → Account Settings → Tokens.");
-    return null;
-  }
-  const scopes = ["", ...(teams.json?.teams ?? []).map((t) => `teamId=${t.id}`)];
-  for (const candidate of scopes) {
-    scope = candidate;
+  for (const team of teams.json?.teams ?? []) {
+    scope = `teamId=${team.id}`;
     const res = await api("GET", `/v9/projects/${encodeURIComponent(projectName)}`);
     if (res.ok) return res.json;
   }
   scope = "";
-  fail("Proyecto de Vercel", `No encontré el proyecto "${projectName}" con este token. Si tiene otro nombre, cargalo en la variable VERCEL_PROJECT del repo.`);
+  if ([401, 403].includes(direct.status) && !teams.ok) {
+    fail(
+      "Token de Vercel",
+      `Vercel rechazó VERCEL_TOKEN o no le da acceso al proyecto "${projectName}": puede haber vencido o tener otro alcance. Creá otro en vercel.com/account/tokens con el alcance de tu equipo.`,
+    );
+  } else {
+    fail("Proyecto de Vercel", `No encontré el proyecto "${projectName}" con este token. Si tiene otro nombre, cargalo en la variable VERCEL_PROJECT del repo.`);
+  }
   return null;
 }
 
@@ -250,6 +258,8 @@ async function configureDomains(project) {
     if (added.ok) ok("Dominio", `${body.name} quedó agregado al proyecto.`);
     else if (added.status === 409) {
       fail("Dominio", `${body.name} está en otro proyecto de Vercel (¿uno importado dos veces?). Sacalo de ahí o borrá ese proyecto, y volvé a correr este workflow.`);
+    } else if (added.status === 403) {
+      warn("Dominio", `El token no puede agregar ${body.name} (¿es de proyecto?). Agregalo en Vercel: Settings → Domains → Add Domain.`);
     } else fail("Dominio", `No pude agregar ${body.name}: ${added.error}`);
   }
 }
@@ -259,6 +269,11 @@ async function domainStatus() {
   if (config.ok && config.json?.misconfigured === false) {
     ok("Dominio", `${domain} ya apunta a Vercel y tiene certificado HTTPS.`);
     return true;
+  }
+  // Un token de proyecto no ve la configuración del dominio: se prueba el sitio directamente.
+  if (!config.ok) {
+    const live = await fetchText(`https://${domain}/`);
+    if (live.status === 200 && live.text.includes("TokenARG")) return true;
   }
   const info = await api("GET", `/v5/domains/${domain}`);
   const current = info.json?.domain?.nameservers ?? [];
