@@ -264,9 +264,18 @@ async function configureDomains(project) {
   }
 }
 
-async function domainStatus() {
-  const config = await api("GET", `/v6/domains/${domain}/config`);
-  if (config.ok && config.json?.misconfigured === false) {
+async function domainStatus(project) {
+  const configured = async () => {
+    const config = await api("GET", `/v6/domains/${domain}/config`);
+    return { config, ready: config.ok && config.json?.misconfigured === false };
+  };
+  let { config, ready } = await configured();
+  if (!ready && project) {
+    // Le pide a Vercel que vuelva a mirar la delegación ahora, sin esperar su chequeo periódico.
+    for (const name of [domain, `www.${domain}`]) await api("POST", `/v9/projects/${project.id}/domains/${name}/verify`);
+    ({ config, ready } = await configured());
+  }
+  if (ready) {
     ok("Dominio", `${domain} ya apunta a Vercel y tiene certificado HTTPS.`);
     return true;
   }
@@ -275,13 +284,19 @@ async function domainStatus() {
     const live = await fetchText(`https://${domain}/`);
     if (live.status === 200 && live.text.includes("TokenARG")) return true;
   }
-  const info = await api("GET", `/v5/domains/${domain}`);
-  const current = info.json?.domain?.nameservers ?? [];
-  const intended = info.json?.domain?.intendedNameservers?.length ? info.json.domain.intendedNameservers : VERCEL_NS;
+  const info = (await api("GET", `/v5/domains/${domain}`)).json?.domain ?? {};
+  const current = (info.nameservers ?? []).map((n) => n.toLowerCase());
+  const intended = info.intendedNameservers?.length ? info.intendedNameservers : VERCEL_NS;
+  console.log(
+    `Dominio según Vercel: ${JSON.stringify({ serviceType: info.serviceType, verified: info.verified, nameservers: info.nameservers, intendedNameservers: info.intendedNameservers, configuredBy: config.json?.configuredBy ?? null })}`,
+  );
+  const delegated = current.length > 0 && intended.every((ns) => current.includes(ns.toLowerCase()));
   warn(
     "Dominio",
-    `${domain} todavía no apunta a Vercel. En nic.ar (Mis dominios → Delegar) cargá ${intended.join(" y ")}` +
-      `${current.length ? `; hoy está delegado a ${current.join(", ")}` : ""}. La delegación tarda de minutos a unas horas.`,
+    delegated
+      ? `La delegación de ${domain} en nic.ar ya apunta a Vercel (${current.join(", ")}). Falta que Vercel active el dominio y emita el certificado: suele tardar minutos, a veces unas horas.`
+      : `${domain} todavía no apunta a Vercel. En nic.ar (Mis dominios → Delegar) cargá ${intended.join(" y ")}` +
+          `${current.length ? `; hoy está delegado a ${current.join(", ")}` : ""}. La delegación tarda de minutos a unas horas.`,
   );
   return false;
 }
@@ -362,7 +377,7 @@ async function main() {
   const refreshed = (await api("GET", `/v9/projects/${project.id}`)).json ?? project;
   const host = productionHost(refreshed, deployment);
   if (host) await checkSite(`https://${host}`, host);
-  if (await domainStatus()) await checkSite(`https://${domain}`, domain);
+  if (await domainStatus(project)) await checkSite(`https://${domain}`, domain);
 }
 
 main()
