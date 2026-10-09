@@ -16,6 +16,7 @@ name: Publicar en Vercel
 #   KYC_AGENT_PRIVATE_KEY  opcional: si no está y el agente KYC es la misma billetera que
 #                          desplegó, se usa la clave del deployer
 # Variables (pestaña Variables), opcionales: VERCEL_PROJECT (token-arg), APP_DOMAIN (tokenarg.net.ar)
+# y ADMIN_WALLETS (direcciones que entran a /admin, separadas por comas; si no está, la del deploy)
 
 on:
   workflow_dispatch:
@@ -52,6 +53,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_PROJECT: ${{ vars.VERCEL_PROJECT || 'token-arg' }}
           APP_DOMAIN: ${{ vars.APP_DOMAIN || 'tokenarg.net.ar' }}
+          ADMIN_WALLETS: ${{ vars.ADMIN_WALLETS }}
           AGENT_SECRET: ${{ secrets.KYC_AGENT_PRIVATE_KEY }}
           # El secret de este repo quedó como DEPLOYES_PRIVATE_KEYS (ver deploy-testnet.yml).
           DEPLOYER_SECRET: ${{ secrets.DEPLOYER_PRIVATE_KEY || secrets.DEPLOYES_PRIVATE_KEYS }}

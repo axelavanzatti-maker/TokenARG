@@ -253,7 +253,7 @@ Todas están documentadas en `.env.example`. Las principales:
 | `SESSION_SECRET` | Firma de las cookies de sesión (32 caracteres como mínimo) |
 | `CRON_SECRET` | Protege `/api/cron/sync` |
 | `ALLOW_MOCK_KYC` | Habilita el KYC simulado en builds de producción, solo en testnet |
-| `ADMIN_WALLETS` | Billeteras (separadas por comas) que entran al panel `/admin` firmando con SIWE. El workflow "Publicar en Vercel" carga las administradoras de los deploys. |
+| `ADMIN_WALLETS` | Billeteras (separadas por comas) que entran al panel `/admin` firmando con SIWE. El workflow "Publicar en Vercel" carga las de la variable `ADMIN_WALLETS` del repo o, si no está, las administradoras de los deploys. |
 
 Las direcciones de los contratos no van en el `.env`: salen de `blockchain/deployments/<chainId>.json` y las carga `npm run chain:sync`.
 

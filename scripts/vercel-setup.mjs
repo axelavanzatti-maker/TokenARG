@@ -150,8 +150,14 @@ async function configureEnv(project) {
     { key: "ALLOW_MOCK_KYC", value: "true", type: "encrypted", target: all },
     { key: "NEXT_PUBLIC_APP_URL", value: `https://${domain}`, type: "encrypted", target: ["production"] },
   ];
-  // Quién entra al panel /admin: las billeteras administradoras de los deploys (son públicas).
-  const admins = [...new Set(deploymentFiles().map((d) => d.admin).filter(Boolean))];
+  // Quién entra al panel /admin: la variable ADMIN_WALLETS del repo o, si no está, las billeteras
+  // administradoras de los deploys. Son direcciones públicas, no claves.
+  const fromRepo = (process.env.ADMIN_WALLETS ?? "").split(",").map((a) => a.trim()).filter(Boolean);
+  const invalid = fromRepo.filter((a) => !/^0x[0-9a-fA-F]{40}$/.test(a));
+  if (invalid.length > 0) {
+    warn("Administradores", `La variable ADMIN_WALLETS tiene direcciones que no son de Ethereum (${invalid.join(", ")}): uso las de los deploys.`);
+  }
+  const admins = fromRepo.length > 0 && invalid.length === 0 ? fromRepo : [...new Set(deploymentFiles().map((d) => d.admin).filter(Boolean))];
   if (admins.length > 0) wanted.push({ key: "ADMIN_WALLETS", value: admins.join(","), type: "encrypted", target: all });
   // Los secretos de la app se crean una sola vez: cambiarlos cerraría las sesiones abiertas.
   for (const key of ["SESSION_SECRET", "CRON_SECRET"]) {
