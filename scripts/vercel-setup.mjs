@@ -369,6 +369,12 @@ async function main() {
       warn("Deploy", "El proyecto todavía no tiene deploys de producción.");
       return;
     }
+    // Si hay uno en curso (por ejemplo, el de un merge reciente), se espera a que termine.
+    if (["QUEUED", "INITIALIZING", "BUILDING"].includes(deployment.state ?? deployment.readyState)) {
+      console.log(`El deploy ${deployment.uid} está en curso: espero a que termine.`);
+      deployment = await waitFor(deployment.uid);
+      if (!deployment) return;
+    }
     if (!(await reportDeployment(deployment))) return;
   } else {
     if (!(await configureEnv(project))) return;
