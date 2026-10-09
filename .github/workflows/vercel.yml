@@ -44,6 +44,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Diagnóstico del dominio (temporal)
+        run: node scripts/vercel-domain-debug.mjs
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT: ${{ vars.VERCEL_PROJECT || 'token-arg' }}
+          APP_DOMAIN: ${{ vars.APP_DOMAIN || 'tokenarg.net.ar' }}
       - name: Vercel
         if: inputs.accion != 'probar-alta'
         run: node scripts/vercel-setup.mjs
