@@ -206,11 +206,12 @@ La app corre en [Vercel](https://vercel.com) con una base Postgres de [Neon](htt
    | `RPC_URL_11155111` / `RPC_URL_80002` | opcional: RPC privados (Alchemy) para Sepolia y Amoy |
 
    Después, *Deployments → Redeploy*.
-4. **Dominio.**
-   - En Vercel, entrá a *Settings → Domains* y agregá `tokenarg.net.ar` y `www.tokenarg.net.ar`. Elegí la opción de *nameservers* de Vercel.
-   - En [nic.ar](https://nic.ar/), entrá a *Mis dominios → tokenarg.net.ar → Delegar*. Cargá `ns1.vercel-dns.com` y `ns2.vercel-dns.com`.
+4. **Dominio.** nic.ar solo deja delegar el dominio a otros servidores DNS, y Vercel no ofrece su DNS para `tokenarg.net.ar`: no le asigna nameservers, así que delegarlo a `ns1/ns2.vercel-dns.com` lo deja sin responder. Por eso el DNS va en Cloudflare, que es gratis:
+   - En Vercel, *Settings → Domains*: `tokenarg.net.ar` es la dirección principal y `www.tokenarg.net.ar` redirige ahí. El workflow *Publicar en Vercel* los deja así.
+   - En [Cloudflare](https://dash.cloudflare.com/sign-up), agregá `tokenarg.net.ar` con el plan *Free* y cargá dos registros en modo *DNS only* (nube gris): `A` con nombre `@` y valor `216.198.79.1`, y `CNAME` con nombre `www` y valor `cname.vercel-dns.com`. Son los que recomienda Vercel en *Settings → Domains*; si ahí aparecen otros, usá esos.
+   - En [nic.ar](https://nic.ar/), entrá a *Mis dominios → tokenarg.net.ar → Delegar* y cargá los dos nameservers que te da Cloudflare, en lugar de cualquier otro.
 
-   La delegación tarda desde minutos hasta unas horas. Vercel emite el certificado HTTPS solo.
+   La delegación tarda desde minutos hasta unas horas. Cuando Cloudflare la ve, el dominio queda activo y Vercel emite el certificado HTTPS solo.
 
 Cada vez que el workflow de deploy commitea direcciones nuevas, Vercel vuelve a desplegar y las importa. `vercel.json` programa una sincronización diaria con la blockchain. Las compras y las operaciones del mercado se registran al instante desde la propia app.
 
@@ -223,10 +224,10 @@ Los pasos 3 y 4 los puede hacer el workflow *Publicar en Vercel* (`.github/workf
 3. En *Actions → Publicar en Vercel → Run workflow*, corré la acción `configurar-y-publicar`. El workflow:
    - carga las variables de entorno. `SESSION_SECRET` y `CRON_SECRET` se generan al azar solo si faltan, y nunca se muestran. La clave del agente KYC sale del secret `KYC_AGENT_PRIVATE_KEY` o, si el agente es la misma billetera que desplegó, del secret del deployer;
    - publica `main` en producción y espera el resultado. Si el build falla, el error queda como aviso en la corrida;
-   - agrega `tokenarg.net.ar` y `www.tokenarg.net.ar`, que redirige al principal, y avisa si la delegación en nic.ar todavía no apunta a Vercel;
+   - deja `tokenarg.net.ar` como dirección principal y `www.tokenarg.net.ar` redirigiendo ahí, y revisa si el dominio ya apunta a Vercel. Si no, dice qué registros o nameservers faltan;
    - revisa el sitio publicado: inicio, mercado, inicio de sesión y que se vean los contratos de cada red.
 
-La delegación en nic.ar se sigue haciendo a mano. La acción `revisar` solo controla el último deploy, el dominio y el sitio.
+El DNS en Cloudflare y la delegación en nic.ar se hacen a mano. La acción `revisar` solo controla el último deploy, el dominio y el sitio.
 
 ## Captación
 
@@ -252,7 +253,7 @@ Todas están documentadas en `.env.example`. Las principales:
 | `SESSION_SECRET` | Firma de las cookies de sesión (32 caracteres como mínimo) |
 | `CRON_SECRET` | Protege `/api/cron/sync` |
 | `ALLOW_MOCK_KYC` | Habilita el KYC simulado en builds de producción, solo en testnet |
-| `ADMIN_WALLETS` | Billeteras (separadas por comas) que entran al panel `/admin` firmando con SIWE. El workflow "Publicar en Vercel" carga las administradoras de los deploys. |
+| `ADMIN_WALLETS` | Billeteras (separadas por comas) que entran al panel `/admin` firmando con SIWE. El workflow "Publicar en Vercel" carga las de la variable `ADMIN_WALLETS` del repo o, si no está, las administradoras de los deploys. |
 
 Las direcciones de los contratos no van en el `.env`: salen de `blockchain/deployments/<chainId>.json` y las carga `npm run chain:sync`.
 
