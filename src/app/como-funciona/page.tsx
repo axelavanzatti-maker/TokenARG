@@ -2,13 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { IS_TESTNET } from "@/lib/chains";
 import { activeDeployments } from "@/server/deployments";
+import { shareMetadata } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
+const DESCRIPTION =
+  "Qué es un token, una blockchain y un contrato inteligente, qué comprás cuando invertís en TokenARG, de dónde sale la ganancia y cuáles son los riesgos. Explicado sin tecnicismos.";
+
 export const metadata: Metadata = {
   title: "Cómo funciona",
-  description:
-    "Qué es un token, una blockchain y un contrato inteligente, qué comprás cuando invertís en TokenARG, de dónde sale la ganancia y cuáles son los riesgos. Explicado sin tecnicismos.",
+  description: DESCRIPTION,
+  ...shareMetadata("Cómo funciona", DESCRIPTION, "/como-funciona"),
 };
 
 const STEPS = [
