@@ -256,3 +256,51 @@ model Trade {
   @@index([buyer])
   @@index([seller])
 }
+
+enum ApplicationStatus {
+  NUEVA
+  EN_EVALUACION
+  APROBADA
+  DESCARTADA
+}
+
+/// Postulación de un emisor desde "Creá tu proyecto". El equipo la evalúa antes de cotizar.
+model ProjectApplication {
+  id          String            @id @default(cuid())
+  companyName String
+  contactName String
+  email       String
+  phone       String?
+  /// Qué quiere tokenizar: inmueble, campaña agro, deuda PyME o participación en una empresa.
+  category    Category
+  location    String
+  /// Monto que quiere recaudar, en dólares.
+  amountUSD   Decimal           @db.Decimal(18, 2)
+  description String
+  /// Si el activo ya está en un fideicomiso o hay que armarlo.
+  hasTrust    Boolean           @default(false)
+  website     String?
+  /// Canal por el que llegó (utm_source), para medir qué difusión funciona.
+  source      String?
+  status      ApplicationStatus @default(NUEVA)
+  createdAt   DateTime          @default(now())
+
+  @@index([createdAt])
+}
+
+/// Lista de espera del lanzamiento con dinero real. Cada inscripto tiene un código para invitar.
+model WaitlistEntry {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  name         String?
+  /// Código propio para invitar: va en el enlace /lista-de-espera?ref=<código>.
+  code         String          @unique
+  referredById String?
+  referredBy   WaitlistEntry?  @relation("Invitaciones", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals    WaitlistEntry[] @relation("Invitaciones")
+  /// Canal por el que llegó (utm_source), para medir qué difusión funciona.
+  source       String?
+  createdAt    DateTime        @default(now())
+
+  @@index([createdAt])
+}

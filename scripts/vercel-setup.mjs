@@ -150,6 +150,9 @@ async function configureEnv(project) {
     { key: "ALLOW_MOCK_KYC", value: "true", type: "encrypted", target: all },
     { key: "NEXT_PUBLIC_APP_URL", value: `https://${domain}`, type: "encrypted", target: ["production"] },
   ];
+  // Quién entra al panel /admin: las billeteras administradoras de los deploys (son públicas).
+  const admins = [...new Set(deploymentFiles().map((d) => d.admin).filter(Boolean))];
+  if (admins.length > 0) wanted.push({ key: "ADMIN_WALLETS", value: admins.join(","), type: "encrypted", target: all });
   // Los secretos de la app se crean una sola vez: cambiarlos cerraría las sesiones abiertas.
   for (const key of ["SESSION_SECRET", "CRON_SECRET"]) {
     if (existing(key).length === 0) wanted.push({ key, value: random(), type: "sensitive", target: secretTargets });

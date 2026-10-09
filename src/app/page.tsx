@@ -150,6 +150,33 @@ export default async function Marketplace({ searchParams }: { searchParams: Prom
       </section>
 
       <HowItWorks />
+
+      <section aria-label="Sumate" className="mx-auto mt-16 grid max-w-[1200px] gap-4 px-4 sm:px-6 md:grid-cols-2 lg:px-8">
+        <div className="rounded-[var(--radius-card)] border border-rule bg-card p-6">
+          <h2 className="heading text-xl text-ink">¿Querés invertir con dinero real?</h2>
+          <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+            Sumate a la lista de espera: te avisamos primero cuando abramos, y cada amigo que invites te adelanta lugares.
+          </p>
+          <Link
+            href="/lista-de-espera"
+            className="mt-4 inline-flex items-center rounded-[var(--radius-control)] bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-deep"
+          >
+            Sumarme a la lista
+          </Link>
+        </div>
+        <div className="rounded-[var(--radius-card)] border border-rule bg-card p-6">
+          <h2 className="heading text-xl text-ink">¿Tenés un proyecto para financiar?</h2>
+          <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+            Un edificio, una campaña, tu PyME o una parte de tu empresa: lo convertimos en tokens que se compran desde pocos dólares.
+          </p>
+          <Link
+            href="/crea-tu-proyecto"
+            className="mt-4 inline-flex items-center rounded-[var(--radius-control)] border border-rule-strong bg-card px-4 py-2.5 text-sm font-semibold text-ink hover:border-ink/40"
+          >
+            Creá tu proyecto
+          </Link>
+        </div>
+      </section>
     </>
   );
 }

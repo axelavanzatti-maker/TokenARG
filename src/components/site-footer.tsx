@@ -33,6 +33,16 @@ export function SiteFooter() {
                 Verificación de identidad
               </Link>
             </li>
+            <li>
+              <Link href="/lista-de-espera" className="text-ink-muted hover:text-ink">
+                Lista de espera
+              </Link>
+            </li>
+            <li>
+              <Link href="/crea-tu-proyecto" className="text-ink-muted hover:text-ink">
+                Creá tu proyecto
+              </Link>
+            </li>
           </ul>
         </div>
         <div className="max-w-[68ch] space-y-3 text-sm leading-relaxed text-ink-muted">
