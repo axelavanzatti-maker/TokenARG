@@ -152,8 +152,9 @@ async function configureEnv(project) {
   ];
   // Quién entra al panel /admin: la variable ADMIN_WALLETS del repo o, si no está, las billeteras
   // administradoras de los deploys. Son direcciones públicas, no claves.
-  const fromRepo = (process.env.ADMIN_WALLETS ?? "").split(",").map((a) => a.trim()).filter(Boolean);
-  const invalid = fromRepo.filter((a) => !/^0x[0-9a-fA-F]{40}$/.test(a));
+  // En minúsculas: la app rechaza una dirección con mayúsculas si el checksum no coincide.
+  const fromRepo = (process.env.ADMIN_WALLETS ?? "").split(",").map((a) => a.trim().toLowerCase()).filter(Boolean);
+  const invalid = fromRepo.filter((a) => !/^0x[0-9a-f]{40}$/.test(a));
   if (invalid.length > 0) {
     warn("Administradores", `La variable ADMIN_WALLETS tiene direcciones que no son de Ethereum (${invalid.join(", ")}): uso las de los deploys.`);
   }
