@@ -51,7 +51,7 @@ jobs:
           VERCEL_PROJECT: ${{ vars.VERCEL_PROJECT || 'token-arg' }}
           APP_DOMAIN: ${{ vars.APP_DOMAIN || 'tokenarg.net.ar' }}
       - name: Vercel
-        if: inputs.accion != 'probar-alta'
+        if: false
         run: node scripts/vercel-setup.mjs
         env:
           ACCION: ${{ inputs.accion }}

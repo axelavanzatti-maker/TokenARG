@@ -31,34 +31,21 @@ const DOMAIN_KEYS = [
 const err = (r) => (r.json?.error ? { code: r.json.error.code, message: r.json.error.message } : undefined);
 
 async function main() {
-  const user = await api("GET", "/v2/user");
-  note("user", { status: user.status, version: user.json?.user?.version, defaultTeamId: user.json?.user?.defaultTeamId, err: err(user) });
-  const teams = await api("GET", "/v2/teams?limit=20");
-  note("teams", { status: teams.status, teams: (teams.json?.teams ?? []).map((t) => ({ id: t.id, slug: t.slug })), err: err(teams) });
-
   const project = await api("GET", `/v9/projects/${projectName}`);
   const teamId = project.json?.accountId;
-  note("project", { status: project.status, accountId: teamId, err: err(project) });
-
-  for (const [label, q] of [["sin teamId", ""], ["con teamId", `?teamId=${teamId}`]]) {
-    const d = await api("GET", `/v5/domains/${domain}${q}`);
-    note(`v5 domain ${label}`, { status: d.status, ...pick(d.json?.domain, DOMAIN_KEYS), keys: Object.keys(d.json?.domain ?? {}), err: err(d) });
-    const c = await api("GET", `/v6/domains/${domain}/config${q}`);
-    note(`v6 config ${label}`, { status: c.status, ...pick(c.json, ["configuredBy", "misconfigured", "serviceType", "nameservers", "aValues", "cnames", "conflicts", "acceptedChallenges", "recommendedIPv4", "recommendedCNAME"]), err: err(c) });
-    const r = await api("GET", `/v4/domains/${domain}/records${q}`);
-    note(`v4 records ${label}`, { status: r.status, count: r.json?.records?.length, records: (r.json?.records ?? []).map((x) => `${x.type} ${x.name} ${x.value}`), err: err(r) });
-  }
-
   const q = `?teamId=${teamId}`;
-  for (const name of [domain, `www.${domain}`]) {
-    const pd = await api("GET", `/v9/projects/${project.json?.id}/domains/${name}${q}`);
-    note(`project domain ${name}`, { status: pd.status, ...pick(pd.json, ["name", "apexName", "verified", "verification", "redirect", "gitBranch", "createdAt"]), err: err(pd) });
-  }
-
+  const d = await api("GET", `/v5/domains/${domain}${q}`);
+  note("v5 verificación", { status: d.status, ...pick(d.json?.domain, ["configVerifiedAt", "txtVerifiedAt", "nsVerifiedAt", "verificationRecord", "echMode"]) });
+  const www = await api("GET", `/v9/projects/${project.json?.id}/domains/www.${domain}${q}`);
+  note("project domain www", { status: www.status, ...pick(www.json, ["name", "apexName", "verified", "verification", "redirect", "redirectStatusCode"]), err: err(www) });
+  const apex = await api("GET", `/v9/projects/${project.json?.id}/domains/${domain}${q}`);
+  note("project domain apex", { status: apex.status, ...pick(apex.json, ["redirect", "redirectStatusCode", "verification"]), err: err(apex) });
   const patch = await api("PATCH", `/v3/domains/${domain}${q}`, { op: "update", zone: true });
-  note("PATCH v3 zone (con teamId)", { status: patch.status, body: patch.json && !patch.json.error ? patch.json : undefined, err: err(patch) });
+  note("PATCH v3 zone con teamId", { status: patch.status, body: patch.json && !patch.json.error ? patch.json : undefined, err: err(patch) });
+  const add = await api("POST", `/v7/domains${q}`, { method: "add", name: domain, zone: true });
+  note("POST v7 add zone", { status: add.status, body: add.json && !add.json.error ? pick(add.json.domain ?? add.json, DOMAIN_KEYS) : undefined, err: err(add) });
   const after = await api("GET", `/v5/domains/${domain}${q}`);
-  note("v5 domain después", { status: after.status, ...pick(after.json?.domain, DOMAIN_KEYS), err: err(after) });
+  note("v5 después", { status: after.status, ...pick(after.json?.domain, ["serviceType", "zone", "nameservers", "intendedNameservers"]) });
 }
 
 main().catch((e) => console.log(`::error title=diagnóstico::${esc(e?.stack ?? e)}`));
