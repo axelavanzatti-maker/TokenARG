@@ -9,6 +9,7 @@ import { ConnectButton } from "./connect-button";
 const NAV = [
   { href: "/", label: "Proyectos", match: (p: string) => p === "/" || p.startsWith("/project") },
   { href: "/mercado", label: "Mercado", match: (p: string) => p.startsWith("/mercado") },
+  { href: "/como-funciona", label: "Cómo funciona", match: (p: string) => p.startsWith("/como-funciona") },
   { href: "/portfolio", label: "Mi cartera", match: (p: string) => p.startsWith("/portfolio") },
   { href: "/kyc", label: "Verificación", match: (p: string) => p.startsWith("/kyc") },
 ];
