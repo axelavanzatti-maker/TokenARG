@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
@@ -41,6 +42,8 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <main id="contenido">{children}</main>
           <SiteFooter />
         </Providers>
+        {/* Visitas, páginas y de dónde llega la gente (sin cookies). Se activa en Vercel → Analytics. */}
+        <Analytics />
       </body>
     </html>
   );
