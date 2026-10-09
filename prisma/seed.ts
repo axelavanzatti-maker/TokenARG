@@ -88,9 +88,11 @@ async function main() {
       assetValuationUSD: p.assetValuationUSD,
       tokenSymbol: p.token.symbol,
     };
-    // Lo que, una vez desplegado el proyecto, sale de la blockchain.
+    // Lo que, una vez desplegado el proyecto, sale de la blockchain. Fuera de la demo local, un
+    // proyecto sin contratos todavía no abrió (por ejemplo, Polygon en testnet antes del deploy):
+    // queda "próximamente" hasta que el deploy de su red lo importe y la ronda diga su estado.
     const onchainFields = {
-      status: demoAmounts || p.status === "PROXIMAMENTE" || p.status === "FONDEANDO" ? p.status : "PROXIMAMENTE",
+      status: demoAmounts ? p.status : "PROXIMAMENTE",
       collectedAmountUSD: collected,
       investorCount: collected > 0 ? Math.max(1, Math.round(collected / (p.minTicketUSD * 6))) : 0,
       opensAt: new Date(now + p.offering.opensInDays * DAY_MS),
