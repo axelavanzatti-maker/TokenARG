@@ -106,6 +106,8 @@ jobs:
       ALLOW_MOCK_KYC: "true"
       # Cuenta #1 de los nodos locales de Hardhat: clave pública de prueba, solo sirve en local.
       KYC_AGENT_PRIVATE_KEY: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d"
+      # Cuenta #9 de Hardhat (clave pública de prueba) como administradora del panel /admin.
+      ADMIN_WALLETS: "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720"
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -150,6 +152,11 @@ jobs:
         run: npx tsx scripts/live-check.ts
         env:
           BASE_URL: http://localhost:3000
+      - name: Captación (postulaciones, lista de espera y panel)
+        run: npx tsx scripts/growth-smoke.ts
+        env:
+          BASE_URL: http://localhost:3000
+          ADMIN_TEST_KEY: "0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6"
       - name: Navegador para las pruebas e2e
         # Las imágenes de GitHub ya traen las bibliotecas de Chrome, así que no hace falta apt
         # (--with-deps), que a veces se cuelga con el espejo de Ubuntu.

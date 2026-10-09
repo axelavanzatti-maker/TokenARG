@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const STEPS = [
   {
     title: "Verificá tu identidad",
@@ -38,6 +40,13 @@ export function HowItWorks() {
           </li>
         ))}
       </ol>
+      <p className="mt-8 text-sm text-ink-muted">
+        ¿Qué es un token, una blockchain o un contrato inteligente?{" "}
+        <Link href="/como-funciona" className="font-semibold text-brand underline underline-offset-2 hover:text-brand-deep">
+          Te lo explicamos sin tecnicismos
+        </Link>
+        .
+      </p>
     </section>
   );
 }

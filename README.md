@@ -14,7 +14,7 @@ TokenARG es un sitio web para cargar, mostrar, adquirir y comercializar tokens R
 | Capa | Contenido |
 |---|---|
 | **Contratos** (`blockchain/`) | `IdentityRegistry`: lista blanca KYC con vencimiento. `AssetToken`: ERC-20 que verifica el KYC en cada movimiento, reparte rentas en USDC y guarda el hash del contrato fiduciario. `TokenOffering`: venta primaria en USDC con fondos en garantía, mínimo, cupo y reembolsos. `P2PMarket`: mercado secundario con órdenes de precio fijo y comisión por parte. `PaymentRouter` + adaptadores: pagar con otras monedas (Uniswap V3 en mainnet, precios fijos de prueba en testnet). Hardhat 3 + OpenZeppelin 5.6. |
-| **App** (`src/`) | Next.js 16 con:<br>• marketplace con filtros por categoría, estado y red<br>• ficha con métricas, documentos verificables y panel de inversión con selector "Pagar con"<br>• mercado secundario: gráfico de precio, libro de órdenes, publicar y retirar órdenes<br>• página `/mercado` con todos los tokens<br>• alta KYC con firma SIWE, válida en las dos redes<br>• cartera con valor de mercado, rentas y reembolsos |
+| **App** (`src/`) | Next.js 16 con:<br>• marketplace con filtros por categoría, estado y red<br>• ficha con métricas, documentos verificables y panel de inversión con selector "Pagar con"<br>• mercado secundario: gráfico de precio, libro de órdenes, publicar y retirar órdenes<br>• página `/mercado` con todos los tokens<br>• alta KYC con firma SIWE, válida en las dos redes<br>• cartera con valor de mercado, rentas y reembolsos<br>• `/como-funciona`: token, blockchain y contratos inteligentes sin tecnicismos<br>• captación: `/crea-tu-proyecto` (postulación de emisores), `/lista-de-espera` (con invitaciones) y el panel `/admin` |
 | **Backend** (`src/app/api`, `src/server`) | Sesiones SIWE. KYC con proveedor intercambiable (simulado o webhook firmado). Una billetera agente habilita a cada inversor en el registro de cada red. Indexador de compras, rentas y operaciones del mercado, por red. |
 | **Datos** (`prisma/`) | PostgreSQL con Prisma 7: proyectos, documentos, legajos KYC, altas por red, contratos por red, inversiones, distribuciones y operaciones del mercado. |
 | **CI/CD** (`.github/workflows/`) | `ci.yml`: contratos, tipos, lint, build y la demo completa con e2e en cada push. `deploy-testnet.yml`: despliega en Amoy y Sepolia con un clic y guarda las direcciones en el repo. |
@@ -228,6 +228,15 @@ Los pasos 3 y 4 los puede hacer el workflow *Publicar en Vercel* (`.github/workf
 
 La delegación en nic.ar se sigue haciendo a mano. La acción `revisar` solo controla el último deploy, el dominio y el sitio.
 
+## Captación
+
+- **Creá tu proyecto** (`/crea-tu-proyecto`): explica qué pone TokenARG y qué necesita el emisor, el proceso y las preguntas frecuentes, y tiene un formulario de postulación. Las postulaciones se guardan en `ProjectApplication`.
+- **Lista de espera** (`/lista-de-espera`): email y consentimiento. Cada inscripto recibe un código para invitar (`/lista-de-espera?ref=<código>`), y cada persona que se suma con su enlace lo adelanta 10 lugares. Los inscriptos se guardan en `WaitlistEntry`.
+- **Canales:** las dos páginas guardan `utm_source`. Para medir cada difusión, usá enlaces como `/lista-de-espera?utm_source=instagram-fulano`.
+- **Panel `/admin`:** entra la billetera de `ADMIN_WALLETS` firmando con SIWE. Muestra postulaciones, inscriptos, quiénes más invitaron y de dónde llegan, y descarga todo en CSV.
+- **Formularios:** tienen un campo trampa para bots y aceptan pedidos solo del propio sitio.
+- **Prueba:** `scripts/growth-smoke.ts` las prueba en el CI.
+
 ## Variables de entorno
 
 Todas están documentadas en `.env.example`. Las principales:
@@ -243,6 +252,7 @@ Todas están documentadas en `.env.example`. Las principales:
 | `SESSION_SECRET` | Firma de las cookies de sesión (32 caracteres como mínimo) |
 | `CRON_SECRET` | Protege `/api/cron/sync` |
 | `ALLOW_MOCK_KYC` | Habilita el KYC simulado en builds de producción, solo en testnet |
+| `ADMIN_WALLETS` | Billeteras (separadas por comas) que entran al panel `/admin` firmando con SIWE. El workflow "Publicar en Vercel" carga las administradoras de los deploys. |
 
 Las direcciones de los contratos no van en el `.env`: salen de `blockchain/deployments/<chainId>.json` y las carga `npm run chain:sync`.
 
