@@ -146,6 +146,10 @@ jobs:
           cat next.log; exit 1
       - name: Prueba de humo de la API
         run: npm run smoke
+      - name: Alta de prueba como la del sitio publicado
+        run: npx tsx scripts/live-check.ts
+        env:
+          BASE_URL: http://localhost:3000
       - name: Navegador para las pruebas e2e
         # Las imágenes de GitHub ya traen las bibliotecas de Chrome, así que no hace falta apt
         # (--with-deps), que a veces se cuelga con el espejo de Ubuntu.

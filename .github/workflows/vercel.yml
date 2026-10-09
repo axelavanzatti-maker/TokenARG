@@ -8,6 +8,8 @@ name: Publicar en Vercel
 #     en nic.ar ya apunta a Vercel;
 #   - control del sitio: inicio, mercado, inicio de sesión y contratos importados de cada red.
 # La acción "revisar" solo hace los dos últimos puntos sobre el último deploy de producción.
+# La acción "probar-alta" da de alta una billetera nueva en el sitio publicado, como un visitante:
+# inicio de sesión, KYC simulado y alta on-chain (scripts/live-check.ts; gasta el gas de un alta).
 #
 # Secrets (Settings → Secrets and variables → Actions → Secrets):
 #   VERCEL_TOKEN           obligatorio: vercel.com → Account Settings → Tokens → Create
@@ -21,7 +23,7 @@ on:
       accion:
         description: "Qué hacer"
         type: choice
-        options: [configurar-y-publicar, revisar]
+        options: [configurar-y-publicar, revisar, probar-alta]
         default: configurar-y-publicar
 
 permissions:
@@ -33,7 +35,7 @@ concurrency:
 
 jobs:
   vercel:
-    name: ${{ inputs.accion == 'revisar' && 'Revisión' || 'Configurar y publicar' }} en Vercel
+    name: ${{ inputs.accion == 'revisar' && 'Revisión' || inputs.accion == 'probar-alta' && 'Alta de prueba' || 'Configurar y publicar' }} en Vercel
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -41,7 +43,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+          cache: npm
       - name: Vercel
+        if: inputs.accion != 'probar-alta'
         run: node scripts/vercel-setup.mjs
         env:
           ACCION: ${{ inputs.accion }}
@@ -51,3 +55,12 @@ jobs:
           AGENT_SECRET: ${{ secrets.KYC_AGENT_PRIVATE_KEY }}
           # El secret de este repo quedó como DEPLOYES_PRIVATE_KEYS (ver deploy-testnet.yml).
           DEPLOYER_SECRET: ${{ secrets.DEPLOYER_PRIVATE_KEY || secrets.DEPLOYES_PRIVATE_KEYS }}
+      - name: Dependencias para la prueba
+        if: inputs.accion == 'probar-alta'
+        run: npm ci
+      - name: Alta de prueba en el sitio publicado
+        if: inputs.accion == 'probar-alta'
+        run: npx tsx scripts/live-check.ts
+        env:
+          BASE_URL: ${{ vars.SITE_URL || 'https://token-arg.vercel.app' }}
+          NEXT_PUBLIC_NETWORK_MODE: testnet
