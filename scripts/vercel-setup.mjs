@@ -267,6 +267,29 @@ async function configureDomains(project) {
   }
 }
 
+/**
+ * Con la delegación a ns1/ns2.vercel-dns.com (la única opción en nic.ar), Vercel tiene que
+ * alojar la zona DNS del dominio. Si el dominio se agregó al proyecto sin zona, sus nameservers
+ * rechazan las consultas ("lame delegation") y el sitio no carga. Esto la crea si falta.
+ */
+async function ensureDnsZone() {
+  const info = await api("GET", `/v5/domains/${domain}`);
+  if (info.status === 404) {
+    const added = await api("POST", "/v7/domains", { method: "add", name: domain, zone: true });
+    if (added.ok) ok("Dominio", `${domain} quedó agregado a tu cuenta de Vercel con su zona DNS.`);
+    else warn("Dominio", `No pude agregar ${domain} a la cuenta de Vercel: ${added.error}`);
+    return;
+  }
+  const current = info.json?.domain;
+  if (!current) return;
+  console.log(`Dominio en la cuenta: serviceType=${current.serviceType} verified=${current.verified} nameservers=${(current.nameservers ?? []).join(",")}`);
+  if (current.serviceType !== "zeit.world") {
+    const updated = await api("PATCH", `/v3/domains/${domain}`, { op: "update", zone: true });
+    if (updated.ok) ok("Dominio", `Activé la zona DNS de ${domain} en Vercel (servía como DNS externo).`);
+    else warn("Dominio", `No pude activar la zona DNS de ${domain} en Vercel: ${updated.error}`);
+  }
+}
+
 async function domainStatus(project) {
   const configured = async () => {
     const config = await api("GET", `/v6/domains/${domain}/config`);
@@ -274,6 +297,7 @@ async function domainStatus(project) {
   };
   let { config, ready } = await configured();
   if (!ready && project) {
+    await ensureDnsZone();
     // Le pide a Vercel que vuelva a mirar la delegación ahora, sin esperar su chequeo periódico.
     for (const name of [domain, `www.${domain}`]) await api("POST", `/v9/projects/${project.id}/domains/${name}/verify`);
     ({ config, ready } = await configured());
