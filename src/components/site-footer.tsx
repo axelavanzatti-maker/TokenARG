@@ -19,6 +19,11 @@ export function SiteFooter() {
               </Link>
             </li>
             <li>
+              <Link href="/como-funciona" className="text-ink-muted hover:text-ink">
+                Cómo funciona
+              </Link>
+            </li>
+            <li>
               <Link href="/portfolio" className="text-ink-muted hover:text-ink">
                 Mi cartera
               </Link>

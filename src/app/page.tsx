@@ -83,6 +83,13 @@ export default async function Marketplace({ searchParams }: { searchParams: Prom
                 Verificar mi identidad
               </Link>
             </div>
+            <p className="mt-4 text-sm text-ink-muted">
+              ¿Es tu primera vez?{" "}
+              <Link href="/como-funciona" className="font-semibold text-brand underline underline-offset-2 hover:text-brand-deep">
+                Mirá cómo funciona
+              </Link>
+              , sin tecnicismos.
+            </p>
             {totals.collectedUSD > 0 && (
               <p className="mt-8 max-w-[52ch] text-sm text-ink-muted">
                 Hasta hoy se invirtieron <strong className="figure text-ink">{formatUSD(totals.collectedUSD)}</strong> en{" "}
