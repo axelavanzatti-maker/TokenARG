@@ -5,13 +5,18 @@ import { cookieToInitialState } from "wagmi";
 import { Providers } from "@/components/providers";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { siteUrl } from "@/lib/site";
 import { getConfig } from "@/lib/web3Config";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  // Base de las URL absolutas de las tarjetas para compartir (og:image, og:url).
+  metadataBase: new URL(siteUrl()),
   title: { default: "TokenARG: invertí en la economía real argentina", template: "%s | TokenARG" },
   description:
     "Fracciones de desarrollos inmobiliarios, campañas agrícolas y financiamiento PyME respaldadas por fideicomisos y registradas en Polygon y Ethereum, con mercado secundario entre inversores.",
+  openGraph: { siteName: "TokenARG", locale: "es_AR", type: "website" },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {

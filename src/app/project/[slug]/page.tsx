@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { CertificateCover } from "@/components/certificate-cover";
 import { ChainLink } from "@/components/chain-link";
+import { ShareButtons } from "@/components/share-buttons";
 import { DocumentViewer } from "@/components/document-viewer";
 import { InvestmentPanel } from "@/components/investment-panel";
 import { TokenMarketSection } from "@/components/market/token-market-section";
@@ -13,6 +14,7 @@ import { chainName, isAppChain } from "@/lib/chains";
 import { CATEGORIES, STATUSES } from "@/lib/categories";
 import { formatDate, formatNumber, formatPercent, formatPrice, formatUSD } from "@/lib/format";
 import { STATUS_TONE, isRoundDeployed, roundTiming } from "@/lib/project-timing";
+import { shareMetadata } from "@/lib/site";
 import { marketChart } from "@/server/market";
 import { getProject } from "@/server/projects";
 
@@ -27,7 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const project = await loadProject(slug);
   if (!project) return { title: "Proyecto no encontrado" };
-  return { title: project.title, description: project.summary };
+  return { title: project.title, description: project.summary, ...shareMetadata(project.title, project.summary, `/project/${project.slug}`) };
 }
 
 export default async function ProjectPage({ params }: Props) {
@@ -135,6 +137,13 @@ export default async function ProjectPage({ params }: Props) {
               network={project.network}
               chain={project.chain}
             />
+            <div className="mt-4 rounded-[var(--radius-card)] border border-rule bg-card p-4">
+              <ShareButtons
+                url={`/project/${project.slug}`}
+                text={`${project.title} en TokenARG: ${formatPercent(project.estimatedIrr)} de TIR estimada, desde ${formatUSD(project.minTicketUSD)}.`}
+                label="Compartí este proyecto"
+              />
+            </div>
           </div>
         </aside>
 

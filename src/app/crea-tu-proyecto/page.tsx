@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProjectApplicationForm } from "@/components/project-application-form";
+import { shareMetadata } from "@/lib/site";
+
+const DESCRIPTION =
+  "Tokenizá un inmueble, una campaña agrícola, el financiamiento de tu PyME o una parte de tu empresa. Postulá tu proyecto: lo evaluamos sin costo y te pasamos una propuesta cerrada.";
 
 export const metadata: Metadata = {
   title: "Creá tu proyecto",
-  description:
-    "Tokenizá un inmueble, una campaña agrícola, el financiamiento de tu PyME o una parte de tu empresa. Postulá tu proyecto: lo evaluamos sin costo y te pasamos una propuesta cerrada.",
+  description: DESCRIPTION,
+  ...shareMetadata("Tokenizá tu proyecto en TokenARG", DESCRIPTION, "/crea-tu-proyecto"),
 };
 
 const WE_PROVIDE = [

@@ -3,13 +3,17 @@ import Link from "next/link";
 import { WaitlistForm } from "@/components/waitlist-form";
 import { prisma } from "@/server/db";
 import { PLACES_PER_REFERRAL, codeSchema } from "@/server/growth";
+import { shareMetadata } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
+const DESCRIPTION =
+  "Sumate a la lista de espera de TokenARG: te avisamos primero cuando abramos con dinero real, y cada amigo que se sume con tu enlace te adelanta lugares.";
+
 export const metadata: Metadata = {
   title: "Lista de espera",
-  description:
-    "Sumate a la lista de espera de TokenARG: te avisamos primero cuando abramos con dinero real, y cada amigo que se sume con tu enlace te adelanta lugares.",
+  description: DESCRIPTION,
+  ...shareMetadata("Sumate a la lista de espera de TokenARG", DESCRIPTION, "/lista-de-espera"),
 };
 
 const BENEFITS = [
