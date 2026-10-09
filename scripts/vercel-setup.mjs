@@ -5,8 +5,8 @@
  *   1. variables de entorno del proyecto. SESSION_SECRET y CRON_SECRET se generan solo si
  *      faltan, y la clave del agente KYC sale de un secret de GitHub;
  *   2. un deploy de producción de main, esperando el resultado (si falla, deja el final del log);
- *   3. los dominios (el principal y www, que redirige al principal) y si la delegación en nic.ar
- *      ya apunta a Vercel;
+ *   3. los dominios (el principal y www, que redirige al principal) y si el dominio ya apunta a
+ *      Vercel. Si no, qué registros o nameservers faltan;
  *   4. un control del sitio publicado: páginas, sesión y contratos importados de cada red.
  *
  * Con ACCION=revisar solo hace 3 y 4 sobre el último deploy de producción (y muestra su log si
@@ -252,11 +252,16 @@ async function reportDeployment(deployment) {
 }
 
 // 3. Dominios --------------------------------------------------------------------------------------
+/**
+ * El dominio sin www es la dirección principal (la de NEXT_PUBLIC_APP_URL) y www redirige ahí.
+ * El panel de Vercel sugiere lo contrario al agregar un dominio: si quedó así, se da vuelta.
+ */
 async function configureDomains(project) {
+  const www = `www.${domain}`;
   const res = await api("GET", `/v9/projects/${project.id}/domains`);
-  const names = new Set((res.json?.domains ?? []).map((d) => d.name));
-  for (const body of [{ name: domain }, { name: `www.${domain}`, redirect: domain, redirectStatusCode: 308 }]) {
-    if (names.has(body.name)) continue;
+  const existing = new Map((res.json?.domains ?? []).map((d) => [d.name, d]));
+  for (const body of [{ name: domain }, { name: www, redirect: domain, redirectStatusCode: 308 }]) {
+    if (existing.has(body.name)) continue;
     const added = await api("POST", `/v10/projects/${project.id}/domains`, body);
     if (added.ok) ok("Dominio", `${body.name} quedó agregado al proyecto.`);
     else if (added.status === 409) {
@@ -265,31 +270,45 @@ async function configureDomains(project) {
       warn("Dominio", `El token no puede agregar ${body.name} (¿es de proyecto?). Agregalo en Vercel: Settings → Domains → Add Domain.`);
     } else fail("Dominio", `No pude agregar ${body.name}: ${added.error}`);
   }
+
+  const apexRedirect = existing.get(domain)?.redirect;
+  const wwwEntry = existing.get(www);
+  const wwwWrong = Boolean(wwwEntry) && wwwEntry.redirect?.toLowerCase() !== domain.toLowerCase();
+  if (!apexRedirect && !wwwWrong) return;
+  // Primero se le saca la redirección al principal: al revés, Vercel lo rechaza como un bucle.
+  const steps = [];
+  if (apexRedirect) steps.push([domain, { redirect: null, redirectStatusCode: null }]);
+  if (wwwWrong) steps.push([www, { redirect: domain, redirectStatusCode: 308 }]);
+  for (const [name, body] of steps) {
+    const changed = await api("PATCH", `/v9/projects/${project.id}/domains/${name}`, body);
+    if (!changed.ok) {
+      warn(
+        "Dominio",
+        `No pude dejar ${domain} como dirección principal (${name}: ${changed.error}). En Vercel: Settings → Domains → Edit en ${www} → "Redirect to" ${domain}.`,
+      );
+      return;
+    }
+  }
+  ok("Dominio", `${domain} quedó como dirección principal y ${www} redirige ahí.`);
+}
+
+const withoutDot = (name) => String(name).toLowerCase().replace(/\.$/, "");
+
+/** Los dos registros que Vercel pide para el dominio y www, con los valores que recomienda hoy. */
+function dnsRecords(config) {
+  const ipv4 = config?.recommendedIPv4?.[0]?.value?.[0] ?? "76.76.21.21";
+  const cnames = (config?.recommendedCNAME ?? []).map((c) => withoutDot(c.value));
+  const cname = cnames.find((c) => c === "cname.vercel-dns.com") ?? cnames[0] ?? "cname.vercel-dns.com";
+  return `A con nombre @ y valor ${ipv4}, y CNAME con nombre www y valor ${cname}`;
 }
 
 /**
- * Con la delegación a ns1/ns2.vercel-dns.com (la única opción en nic.ar), Vercel tiene que
- * alojar la zona DNS del dominio. Si el dominio se agregó al proyecto sin zona, sus nameservers
- * rechazan las consultas ("lame delegation") y el sitio no carga. Esto la crea si falta.
+ * Si el dominio ya apunta a Vercel y, si no, qué falta. nic.ar solo deja delegar el dominio a
+ * otros nameservers, y Vercel no ofrece su DNS para todos los dominios: con tokenarg.net.ar no
+ * asigna nameservers (serviceType "na"), así que delegarlo a ns1/ns2.vercel-dns.com lo deja sin
+ * responder. En ese caso el DNS va en otro servicio (Cloudflare es gratis) con registros A y
+ * CNAME hacia Vercel.
  */
-async function ensureDnsZone() {
-  const info = await api("GET", `/v5/domains/${domain}`);
-  if (info.status === 404) {
-    const added = await api("POST", "/v7/domains", { method: "add", name: domain, zone: true });
-    if (added.ok) ok("Dominio", `${domain} quedó agregado a tu cuenta de Vercel con su zona DNS.`);
-    else warn("Dominio", `No pude agregar ${domain} a la cuenta de Vercel: ${added.error}`);
-    return;
-  }
-  const current = info.json?.domain;
-  if (!current) return;
-  console.log(`Dominio en la cuenta: serviceType=${current.serviceType} verified=${current.verified} nameservers=${(current.nameservers ?? []).join(",")}`);
-  if (current.serviceType !== "zeit.world") {
-    const updated = await api("PATCH", `/v3/domains/${domain}`, { op: "update", zone: true });
-    if (updated.ok) ok("Dominio", `Activé la zona DNS de ${domain} en Vercel (servía como DNS externo).`);
-    else warn("Dominio", `No pude activar la zona DNS de ${domain} en Vercel: ${updated.error}`);
-  }
-}
-
 async function domainStatus(project) {
   const configured = async () => {
     const config = await api("GET", `/v6/domains/${domain}/config`);
@@ -297,13 +316,12 @@ async function domainStatus(project) {
   };
   let { config, ready } = await configured();
   if (!ready && project) {
-    await ensureDnsZone();
-    // Le pide a Vercel que vuelva a mirar la delegación ahora, sin esperar su chequeo periódico.
+    // Le pide a Vercel que vuelva a mirar el dominio ahora, sin esperar su chequeo periódico.
     for (const name of [domain, `www.${domain}`]) await api("POST", `/v9/projects/${project.id}/domains/${name}/verify`);
     ({ config, ready } = await configured());
   }
   if (ready) {
-    ok("Dominio", `${domain} ya apunta a Vercel y tiene certificado HTTPS.`);
+    ok("Dominio", `${domain} ya apunta a Vercel.`);
     return true;
   }
   // Un token de proyecto no ve la configuración del dominio: se prueba el sitio directamente.
@@ -311,20 +329,31 @@ async function domainStatus(project) {
     const live = await fetchText(`https://${domain}/`);
     if (live.status === 200 && live.text.includes("TokenARG")) return true;
   }
+
   const info = (await api("GET", `/v5/domains/${domain}`)).json?.domain ?? {};
-  const current = (info.nameservers ?? []).map((n) => n.toLowerCase());
-  const intended = info.intendedNameservers?.length ? info.intendedNameservers : VERCEL_NS;
-  console.log(
-    `Dominio según Vercel: ${JSON.stringify({ serviceType: info.serviceType, verified: info.verified, nameservers: info.nameservers, intendedNameservers: info.intendedNameservers, configuredBy: config.json?.configuredBy ?? null })}`,
-  );
-  const delegated = current.length > 0 && intended.every((ns) => current.includes(ns.toLowerCase()));
-  warn(
-    "Dominio",
-    delegated
-      ? `La delegación de ${domain} en nic.ar ya apunta a Vercel (${current.join(", ")}). Falta que Vercel active el dominio y emita el certificado: suele tardar minutos, a veces unas horas.`
-      : `${domain} todavía no apunta a Vercel. En nic.ar (Mis dominios → Delegar) cargá ${intended.join(" y ")}` +
-          `${current.length ? `; hoy está delegado a ${current.join(", ")}` : ""}. La delegación tarda de minutos a unas horas.`,
-  );
+  const nameservers = (config.json?.nameservers?.length ? config.json.nameservers : (info.nameservers ?? [])).map(withoutDot);
+  const delegatedToVercel = VERCEL_NS.every((ns) => nameservers.includes(ns));
+  const vercelDns = info.serviceType === "zeit.world" || (info.intendedNameservers ?? []).length > 0;
+  const resolvesTo = [...(config.json?.aValues ?? []), ...(config.json?.cnames ?? [])];
+  const records = dnsRecords(config.json);
+  console.log(`Dominio según Vercel: ${JSON.stringify({ serviceType: info.serviceType, intendedNameservers: info.intendedNameservers, nameservers, resolvesTo })}`);
+
+  const cloudflare =
+    `En Cloudflare (gratis, dash.cloudflare.com) agregá ${domain} con el plan Free y cargá dos registros en modo "DNS only" (nube gris): ${records}. ` +
+    `Después, en nic.ar (Mis dominios → ${domain} → Delegar), cargá los dos nameservers que te da Cloudflare`;
+  let message;
+  if (delegatedToVercel && !vercelDns) {
+    message = `${domain} está delegado a Vercel (${nameservers.join(", ")}), pero Vercel no ofrece su DNS para este dominio: no le asigna nameservers, así que no responden y el sitio no carga. ${cloudflare} en lugar de los de Vercel.`;
+  } else if (delegatedToVercel) {
+    message = `La delegación de ${domain} ya apunta a Vercel. Falta que Vercel active el dominio y emita el certificado: suele tardar minutos, a veces unas horas.`;
+  } else if (resolvesTo.length) {
+    message = `${domain} todavía no apunta a Vercel: hoy resuelve a ${resolvesTo.join(", ")}. Donde esté el DNS del dominio, los registros tienen que ser ${records}.`;
+  } else if (vercelDns) {
+    message = `${domain} todavía no apunta a Vercel. En nic.ar (Mis dominios → ${domain} → Delegar) cargá ${(info.intendedNameservers?.length ? info.intendedNameservers : VERCEL_NS).join(" y ")}${nameservers.length ? `; hoy está delegado a ${nameservers.join(", ")}` : ""}. La delegación tarda de minutos a unas horas.`;
+  } else {
+    message = `${domain} todavía no apunta a Vercel${nameservers.length ? ` (hoy está delegado a ${nameservers.join(", ")})` : ""}. ${cloudflare}. La delegación tarda de minutos a unas horas.`;
+  }
+  warn("Dominio", message);
   return false;
 }
 

@@ -4,8 +4,8 @@ name: Publicar en Vercel
 #   - variables de entorno: modo testnet, KYC simulado, la clave del agente KYC y, si faltan,
 #     SESSION_SECRET y CRON_SECRET generados al azar (nunca se muestran);
 #   - deploy de producción de main, esperando el resultado (si falla, el error queda como aviso);
-#   - dominios tokenarg.net.ar y www.tokenarg.net.ar (redirige al principal), y si la delegación
-#     en nic.ar ya apunta a Vercel;
+#   - dominios tokenarg.net.ar y www.tokenarg.net.ar (redirige al principal), y si el dominio ya
+#     apunta a Vercel (si no, qué registros o nameservers faltan);
 #   - control del sitio: inicio, mercado, inicio de sesión y contratos importados de cada red.
 # La acción "revisar" solo hace los dos últimos puntos sobre el último deploy de producción.
 # La acción "probar-alta" da de alta una billetera nueva en el sitio publicado, como un visitante:
