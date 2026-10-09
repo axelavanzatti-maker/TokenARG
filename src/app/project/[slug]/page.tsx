@@ -12,7 +12,7 @@ import { NetworkBadge } from "@/components/network-badge";
 import { chainName, isAppChain } from "@/lib/chains";
 import { CATEGORIES, STATUSES } from "@/lib/categories";
 import { formatDate, formatNumber, formatPercent, formatPrice, formatUSD } from "@/lib/format";
-import { STATUS_TONE, roundTiming } from "@/lib/project-timing";
+import { STATUS_TONE, isRoundDeployed, roundTiming } from "@/lib/project-timing";
 import { marketChart } from "@/server/market";
 import { getProject } from "@/server/projects";
 
@@ -99,7 +99,11 @@ export default async function ProjectPage({ params }: Props) {
                 project.capRate !== null
                   ? { label: "Cap rate", value: formatPercent(project.capRate), note: "Renta neta anual sobre el valor del inmueble." }
                   : { label: "Cap rate", value: "No aplica", note: "Solo para inmuebles que generan renta.", tone: "muted" },
-                { label: "Plazo", value: `${project.termMonths} meses`, note: `Cierre de la ronda: ${formatDate(project.closesAt)}.` },
+                {
+                  label: "Plazo",
+                  value: `${project.termMonths} meses`,
+                  note: isRoundDeployed(project) ? `Cierre de la ronda: ${formatDate(project.closesAt)}.` : "Fechas de la ronda a confirmar.",
+                },
                 {
                   label: "Ticket mínimo",
                   value: formatUSD(project.minTicketUSD),
@@ -210,8 +214,8 @@ export default async function ProjectPage({ params }: Props) {
                 ["Precio por token", formatUSD(project.tokenPriceUSD)],
                 ["Cupo de la ronda", formatUSD(project.targetAmountUSD)],
                 ["Mínimo para cerrar la ronda", formatUSD(project.softCapUSD)],
-                ["Apertura", formatDate(project.opensAt)],
-                ["Cierre", formatDate(project.closesAt)],
+                ["Apertura", isRoundDeployed(project) ? formatDate(project.opensAt) : "A confirmar"],
+                ["Cierre", isRoundDeployed(project) ? formatDate(project.closesAt) : "A confirmar"],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-4 border-b border-rule px-4 py-3 sm:[&:nth-child(odd)]:border-r">
                   <dt className="text-ink-muted">{label}</dt>
